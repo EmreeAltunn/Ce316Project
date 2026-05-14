@@ -1,8 +1,9 @@
 package com.iae;
 
-import com.iae.database.DatabaseManager;
+import com.iae.db.DatabaseManager;
 import com.iae.model.Configuration;
 import com.iae.model.Project;
+import com.iae.model.ResultStatus;
 import com.iae.model.StudentResult;
 import com.iae.model.TestCase;
 import com.iae.service.ConfigurationService;
@@ -10,100 +11,87 @@ import com.iae.service.ProjectService;
 import com.iae.service.StudentResultService;
 import com.iae.service.TestCaseService;
 
+import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 public class Main {
     public static void main(String[] args) {
-        DatabaseManager.initializeDatabase();
+        try {
+            DatabaseManager dbManager = DatabaseManager.getInstance();
+            dbManager.initialize(".");
 
-        String now = LocalDateTime.now().toString();
+            ConfigurationService configurationService = new ConfigurationService(dbManager);
+            ProjectService projectService = new ProjectService(dbManager);
+            TestCaseService testCaseService = new TestCaseService(dbManager);
+            StudentResultService studentResultService = new StudentResultService(dbManager);
 
-        ConfigurationService configurationService = new ConfigurationService();
-        ProjectService projectService = new ProjectService();
-        TestCaseService testCaseService = new TestCaseService();
-        StudentResultService studentResultService = new StudentResultService();
+            Optional<Configuration> savedConfigOpt = configurationService.findByName("C Configuration Test");
+            Configuration savedConfig;
+            
+            if (savedConfigOpt.isEmpty()) {
+                Configuration config = new Configuration();
+                config.setName("C Configuration Test");
+                config.setCompilerPath("gcc");
+                config.setCompilerArgs("main.c -o main");
+                config.setRunCommand("./main");
+                config.setRequiresCompilation(true);
+                config.setSourceFileName("main.c");
+                config.setOutputFileName("main");
+                config.setFileExtension(".c");
+                config.setDescription("A test C config");
+                config.setCreatedAt(LocalDateTime.now());
+                config.setUpdatedAt(LocalDateTime.now());
 
-        Configuration config = new Configuration();
-        config.setName("C Configuration");
-        config.setLanguage("C");
-        config.setCompileCommand("gcc");
-        config.setCompileArgs("main.c -o main");
-        config.setRunCommand("./main");
-        config.setRunArgsTemplate("");
-        config.setCompareMethod("TRIMMED");
-        config.setSourceFileName("main.c");
-        config.setCreatedAt(now);
-        config.setUpdatedAt(now);
+                savedConfig = configurationService.save(config);
+            } else {
+                savedConfig = savedConfigOpt.get();
+            }
 
-        configurationService.createConfiguration(config);
+            Project project = new Project();
+            project.setName("Sorting Assignment");
+            project.setDescription("Implement quicksort");
+            project.setConfigurationId(savedConfig.getId());
+            project.setSubmissionsDirectory("./submissions");
+            project.setWorkingDirectory("./workspace");
+            project.setCreatedAt(LocalDateTime.now());
+            project.setUpdatedAt(LocalDateTime.now());
 
-        Configuration savedConfig = configurationService.getAllConfigurations()
-                .stream()
-                .filter(c -> c.getName().equals("C Configuration"))
-                .findFirst()
-                .orElse(null);
+            Project savedProject = projectService.save(project);
 
-        if (savedConfig == null) {
-            System.out.println("Configuration could not be found.");
-            return;
+            TestCase testCase = new TestCase();
+            testCase.setProjectId(savedProject.getId());
+            testCase.setName("Test 1");
+            testCase.setInputArgs("5 4 3 2 1");
+            testCase.setExpectedOutputFile("output1.txt");
+            testCase.setOrderIndex(1);
+
+            testCaseService.save(testCase);
+
+            StudentResult result = new StudentResult();
+            result.setProjectId(savedProject.getId());
+            result.setStudentId("2020123456");
+            result.setZipFilePath("./submissions/2020123456.zip");
+            result.setCompileStatus(ResultStatus.SUCCESS);
+            result.setCompileOutput("Compiled successfully.");
+            result.setCompileError("");
+            result.setRunStatus(ResultStatus.SUCCESS);
+            result.setProgramOutput("1 2 3 4 5");
+            result.setErrorOutput("");
+            result.setTestStatus(ResultStatus.PASS);
+            result.setTestDetails("Passed Test 1.");
+            result.setProcessedAt(LocalDateTime.now());
+
+            studentResultService.save(result);
+
+            System.out.println("Test completed successfully.");
+            System.out.println("Configurations: " + configurationService.findAll().size());
+            System.out.println("Projects: " + projectService.findAll().size());
+            System.out.println("Test cases: " + testCaseService.findByProjectId(savedProject.getId()).size());
+            System.out.println("Student results: " + studentResultService.findByProjectId(savedProject.getId()).size());
+
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-
-        Project project = new Project();
-        project.setName("Sorting Assignment");
-        project.setConfigurationId(savedConfig.getId());
-        project.setDescription("Test project for C sorting assignment");
-        project.setSubmissionsDirectory("submissions/");
-        project.setWorkingDirectory("workspace/");
-        project.setReportPath("reports/report.txt");
-        project.setCreatedAt(now);
-        project.setUpdatedAt(now);
-
-        projectService.createProject(project);
-
-        Project savedProject = projectService.getAllProjects()
-                .stream()
-                .filter(p -> p.getName().equals("Sorting Assignment"))
-                .findFirst()
-                .orElse(null);
-
-        if (savedProject == null) {
-            System.out.println("Project could not be found.");
-            return;
-        }
-
-        TestCase testCase = new TestCase();
-        testCase.setProjectId(savedProject.getId());
-        testCase.setName("Basic sorting test");
-        testCase.setInputType("INLINE");
-        testCase.setInputData("banana apple cherry");
-        testCase.setExpectedOutputType("INLINE");
-        testCase.setExpectedOutputData("apple banana cherry");
-        testCase.setCommandLineArgs("banana apple cherry");
-        testCase.setOrderIndex(1);
-        testCase.setCreatedAt(now);
-
-        testCaseService.createTestCase(testCase);
-
-        StudentResult result = new StudentResult();
-        result.setProjectId(savedProject.getId());
-        result.setStudentId("220101");
-        result.setZipFileName("220101.zip");
-        result.setExtractedFolderPath("workspace/220101");
-        result.setCompileStatus("SUCCESS");
-        result.setRunStatus("SUCCESS");
-        result.setOutputStatus("SUCCESS");
-        result.setActualOutput("apple banana cherry");
-        result.setExpectedOutputSnapshot("apple banana cherry");
-        result.setErrorMessage(null);
-        result.setProcessedAt(now);
-
-        studentResultService.createStudentResult(result);
-
-        System.out.println("Test completed successfully.");
-        System.out.println("Configurations: " + configurationService.getAllConfigurations().size());
-        System.out.println("Projects: " + projectService.getAllProjects().size());
-        System.out.println("Test cases: " + testCaseService.getTestCasesByProjectId(savedProject.getId()).size());
-        System.out
-                .println("Student results: " + studentResultService.getResultsByProjectId(savedProject.getId()).size());
     }
 }

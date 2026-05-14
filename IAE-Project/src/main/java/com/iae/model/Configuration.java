@@ -1,125 +1,72 @@
 package com.iae.model;
 
-public class Configuration {
+import java.time.LocalDateTime;
 
+public class Configuration {
     private int id;
     private String name;
-    private String language;
-    private String compileCommand;
-    private String compileArgs;
+    private String compilerPath;
+    private String compilerArgs;
     private String runCommand;
-    private String runArgsTemplate;
-    private String compareMethod;
+    private boolean requiresCompilation;
     private String sourceFileName;
-    private String createdAt;
-    private String updatedAt;
+    private String outputFileName;
+    private String fileExtension;
+    private String description;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     public Configuration() {
     }
 
-    public Configuration(int id, String name, String language,
-            String compileCommand, String compileArgs,
-            String runCommand, String runArgsTemplate,
-            String compareMethod, String sourceFileName,
-            String createdAt, String updatedAt) {
+    public Configuration(int id, String name, String compilerPath, String compilerArgs, String runCommand, boolean requiresCompilation, String sourceFileName, String outputFileName, String fileExtension, String description, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.name = name;
-        this.language = language;
-        this.compileCommand = compileCommand;
-        this.compileArgs = compileArgs;
+        this.compilerPath = compilerPath;
+        this.compilerArgs = compilerArgs;
         this.runCommand = runCommand;
-        this.runArgsTemplate = runArgsTemplate;
-        this.compareMethod = compareMethod;
+        this.requiresCompilation = requiresCompilation;
         this.sourceFileName = sourceFileName;
+        this.outputFileName = outputFileName;
+        this.fileExtension = fileExtension;
+        this.description = description;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
-    public int getId() {
-        return id;
-    }
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public String getName() {
-        return name;
-    }
+    public String getCompilerPath() { return compilerPath; }
+    public void setCompilerPath(String compilerPath) { this.compilerPath = compilerPath; }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    public String getCompilerArgs() { return compilerArgs; }
+    public void setCompilerArgs(String compilerArgs) { this.compilerArgs = compilerArgs; }
 
-    public String getLanguage() {
-        return language;
-    }
+    public String getRunCommand() { return runCommand; }
+    public void setRunCommand(String runCommand) { this.runCommand = runCommand; }
 
-    public void setLanguage(String language) {
-        this.language = language;
-    }
+    public boolean isRequiresCompilation() { return requiresCompilation; }
+    public void setRequiresCompilation(boolean requiresCompilation) { this.requiresCompilation = requiresCompilation; }
 
-    public String getCompileCommand() {
-        return compileCommand;
-    }
+    public String getSourceFileName() { return sourceFileName; }
+    public void setSourceFileName(String sourceFileName) { this.sourceFileName = sourceFileName; }
 
-    public void setCompileCommand(String compileCommand) {
-        this.compileCommand = compileCommand;
-    }
+    public String getOutputFileName() { return outputFileName; }
+    public void setOutputFileName(String outputFileName) { this.outputFileName = outputFileName; }
 
-    public String getCompileArgs() {
-        return compileArgs;
-    }
+    public String getFileExtension() { return fileExtension; }
+    public void setFileExtension(String fileExtension) { this.fileExtension = fileExtension; }
 
-    public void setCompileArgs(String compileArgs) {
-        this.compileArgs = compileArgs;
-    }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
-    public String getRunCommand() {
-        return runCommand;
-    }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-    public void setRunCommand(String runCommand) {
-        this.runCommand = runCommand;
-    }
-
-    public String getRunArgsTemplate() {
-        return runArgsTemplate;
-    }
-
-    public void setRunArgsTemplate(String runArgsTemplate) {
-        this.runArgsTemplate = runArgsTemplate;
-    }
-
-    public String getCompareMethod() {
-        return compareMethod;
-    }
-
-    public void setCompareMethod(String compareMethod) {
-        this.compareMethod = compareMethod;
-    }
-
-    public String getSourceFileName() {
-        return sourceFileName;
-    }
-
-    public void setSourceFileName(String sourceFileName) {
-        this.sourceFileName = sourceFileName;
-    }
-
-    public String getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(String createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public String getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(String updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

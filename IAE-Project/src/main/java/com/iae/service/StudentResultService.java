@@ -1,97 +1,119 @@
 package com.iae.service;
 
-import com.iae.database.DatabaseManager;
+import com.iae.db.DatabaseManager;
 import com.iae.model.StudentResult;
+import com.iae.model.ResultStatus;
 
 import java.sql.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-// student result service
 public class StudentResultService {
 
-    public void createStudentResult(StudentResult result) {
-        String sql = """
-                INSERT INTO student_results (
-                    project_id,
-                    student_id,
-                    zip_file_name,
-                    extracted_folder_path,
-                    compile_status,
-                    run_status,
-                    output_status,
-                    actual_output,
-                    expected_output_snapshot,
-                    error_message,
-                    processed_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """;
+    private final DatabaseManager dbManager;
+    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-        try (Connection connection = DatabaseManager.getConnection();
-                PreparedStatement statement = connection.prepareStatement(sql)) {
-
-            statement.setInt(1, result.getProjectId());
-            statement.setString(2, result.getStudentId());
-            statement.setString(3, result.getZipFileName());
-            statement.setString(4, result.getExtractedFolderPath());
-            statement.setString(5, result.getCompileStatus());
-            statement.setString(6, result.getRunStatus());
-            statement.setString(7, result.getOutputStatus());
-            statement.setString(8, result.getActualOutput());
-            statement.setString(9, result.getExpectedOutputSnapshot());
-            statement.setString(10, result.getErrorMessage());
-            statement.setString(11, result.getProcessedAt());
-
-            statement.executeUpdate();
-
-        } catch (SQLException e) {
-            System.err.println("Failed to create student result.");
-            e.printStackTrace();
-        }
+    public StudentResultService(DatabaseManager dbManager) {
+        this.dbManager = dbManager;
     }
 
-    // get student results by project id
-    public List<StudentResult> getResultsByProjectId(int projectId) {
-        List<StudentResult> results = new ArrayList<>();
+    public StudentResult save(StudentResult result) throws SQLException {
+        String sql = "INSERT INTO student_results (project_id, student_id, zip_file_path, compile_status, compile_output, compile_error, run_status, program_output, error_output, test_status, test_details, processed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        if (result.getProcessedAt() == null) {
+            result.setProcessedAt(LocalDateTime.now());
+        }
+
+        try (PreparedStatement stmt = dbManager.getConnection().prepareStatement(sql,
+                Statement.RETURN_GENERATED_KEYS)) {
+
+            stmt.setInt(1, result.getProjectId());
+            stmt.setString(2, result.getStudentId());
+            stmt.setString(3, result.getZipFilePath());
+            stmt.setString(4, result.getCompileStatus() != null ? result.getCompileStatus().name() : ResultStatus.PENDING.name());
+            stmt.setString(5, result.getCompileOutput());
+            stmt.setString(6, result.getCompileError());
+            stmt.setString(7, result.getRunStatus() != null ? result.getRunStatus().name() : null);
+            stmt.setString(8, result.getProgramOutput());
+            stmt.setString(9, result.getErrorOutput());
+            stmt.setString(10, result.getTestStatus() != null ? result.getTestStatus().name() : null);
+            stmt.setString(11, result.getTestDetails());
+            stmt.setString(12, result.getProcessedAt().format(formatter));
+
+            stmt.executeUpdate();
+
+            try (Statement sqlStmt = dbManager.getConnection().createStatement();
+                 ResultSet rs = sqlStmt.executeQuery("SELECT last_insert_rowid()")) {
+                if (rs.next()) {
+                    result.setId(rs.getInt(1));
+                }
+            }
+        }
+
+        return result;
+    }
+
+    public List<StudentResult> findByProjectId(int projectId) throws SQLException {
+        List<StudentResult> list = new ArrayList<>();
 
         String sql = "SELECT * FROM student_results WHERE project_id = ?";
 
-        try (Connection connection = DatabaseManager.getConnection();
-                PreparedStatement statement = connection.prepareStatement(sql)) {
+        try (PreparedStatement stmt = dbManager.getConnection().prepareStatement(sql)) {
 
-            statement.setInt(1, projectId);
-
-            ResultSet rs = statement.executeQuery();
+            stmt.setInt(1, projectId);
+            ResultSet rs = stmt.executeQuery();
 
             while (rs.next()) {
-                results.add(mapResultSetToStudentResult(rs));
+                list.add(map(rs));
             }
-
-        } catch (SQLException e) {
-            System.err.println("Failed to get student results.");
-            e.printStackTrace();
         }
 
-        return results;
+        return list;
     }
 
-    // map result set to student result
-    private StudentResult mapResultSetToStudentResult(ResultSet rs) throws SQLException {
-        StudentResult result = new StudentResult();
+    public void deleteByProjectId(int projectId) throws SQLException {
+        String sql = "DELETE FROM student_results WHERE project_id = ?";
 
-        result.setId(rs.getInt("id"));
-        result.setProjectId(rs.getInt("project_id"));
-        result.setStudentId(rs.getString("student_id"));
-        result.setZipFileName(rs.getString("zip_file_name"));
-        result.setExtractedFolderPath(rs.getString("extracted_folder_path"));
-        result.setCompileStatus(rs.getString("compile_status"));
-        result.setRunStatus(rs.getString("run_status"));
-        result.setOutputStatus(rs.getString("output_status"));
-        result.setActualOutput(rs.getString("actual_output"));
-        result.setExpectedOutputSnapshot(rs.getString("expected_output_snapshot"));
-        result.setErrorMessage(rs.getString("error_message"));
-        result.setProcessedAt(rs.getString("processed_at"));
+        try (PreparedStatement stmt = dbManager.getConnection().prepareStatement(sql)) {
+            stmt.setInt(1, projectId);
+            stmt.executeUpdate();
+        }
+    }
 
-        return result;
+    private StudentResult map(ResultSet rs) throws SQLException {
+        StudentResult sr = new StudentResult();
+
+        sr.setId(rs.getInt("id"));
+        sr.setProjectId(rs.getInt("project_id"));
+        sr.setStudentId(rs.getString("student_id"));
+        sr.setZipFilePath(rs.getString("zip_file_path"));
+
+        sr.setCompileStatus(ResultStatus.valueOf(rs.getString("compile_status")));
+        sr.setCompileOutput(rs.getString("compile_output"));
+        sr.setCompileError(rs.getString("compile_error"));
+
+        String runStatus = rs.getString("run_status");
+        if (runStatus != null) {
+            sr.setRunStatus(ResultStatus.valueOf(runStatus));
+        }
+
+        sr.setProgramOutput(rs.getString("program_output"));
+        sr.setErrorOutput(rs.getString("error_output"));
+
+        String testStatus = rs.getString("test_status");
+        if (testStatus != null) {
+            sr.setTestStatus(ResultStatus.valueOf(testStatus));
+        }
+
+        sr.setTestDetails(rs.getString("test_details"));
+
+        String date = rs.getString("processed_at");
+        if (date != null) {
+            sr.setProcessedAt(LocalDateTime.parse(date, formatter));
+        }
+
+        return sr;
     }
 }

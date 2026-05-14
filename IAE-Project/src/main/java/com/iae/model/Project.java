@@ -1,103 +1,52 @@
 package com.iae.model;
 
-public class Project {
+import java.time.LocalDateTime;
 
+public class Project {
     private int id;
     private String name;
-    private int configurationId;
     private String description;
+    private int configurationId;
     private String submissionsDirectory;
     private String workingDirectory;
-    private String reportPath;
-    private String createdAt;
-    private String updatedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     public Project() {
     }
 
-    public Project(int id, String name, int configurationId, String description,
-            String submissionsDirectory, String workingDirectory,
-            String reportPath, String createdAt, String updatedAt) {
+    public Project(int id, String name, String description, int configurationId, String submissionsDirectory, String workingDirectory, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.name = name;
-        this.configurationId = configurationId;
         this.description = description;
+        this.configurationId = configurationId;
         this.submissionsDirectory = submissionsDirectory;
         this.workingDirectory = workingDirectory;
-        this.reportPath = reportPath;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
-    public int getId() {
-        return id;
-    }
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public String getName() {
-        return name;
-    }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    public int getConfigurationId() { return configurationId; }
+    public void setConfigurationId(int configurationId) { this.configurationId = configurationId; }
 
-    public int getConfigurationId() {
-        return configurationId;
-    }
+    public String getSubmissionsDirectory() { return submissionsDirectory; }
+    public void setSubmissionsDirectory(String submissionsDirectory) { this.submissionsDirectory = submissionsDirectory; }
 
-    public void setConfigurationId(int configurationId) {
-        this.configurationId = configurationId;
-    }
+    public String getWorkingDirectory() { return workingDirectory; }
+    public void setWorkingDirectory(String workingDirectory) { this.workingDirectory = workingDirectory; }
 
-    public String getDescription() {
-        return description;
-    }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getSubmissionsDirectory() {
-        return submissionsDirectory;
-    }
-
-    public void setSubmissionsDirectory(String submissionsDirectory) {
-        this.submissionsDirectory = submissionsDirectory;
-    }
-
-    public String getWorkingDirectory() {
-        return workingDirectory;
-    }
-
-    public void setWorkingDirectory(String workingDirectory) {
-        this.workingDirectory = workingDirectory;
-    }
-
-    public String getReportPath() {
-        return reportPath;
-    }
-
-    public void setReportPath(String reportPath) {
-        this.reportPath = reportPath;
-    }
-
-    public String getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(String createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public String getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(String updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

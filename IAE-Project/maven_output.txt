@@ -1,0 +1,43 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------------< com.iae:IAE-Project >-------------------------
+[INFO] Building IAE-Project 1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.2.0:clean (default-clean) @ IAE-Project ---
+[INFO] Deleting /Users/tulaygokdag/Desktop/CE316_PROJECT/IAE-Project/target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ IAE-Project ---
+[INFO] skip non existing resourceDirectory /Users/tulaygokdag/Desktop/CE316_PROJECT/IAE-Project/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ IAE-Project ---
+[INFO] Changes detected - recompiling the module! :source
+[INFO] Compiling 15 source files with javac [debug target 17] to target/classes
+[WARNING] system modules path not set in conjunction with -source 17
+[INFO] 
+[INFO] --- exec:3.6.3:java (default-cli) @ IAE-Project ---
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+java.sql.SQLException: database connection closed
+	at org.sqlite.SQLiteConnection.checkOpen(SQLiteConnection.java:429)
+	at org.sqlite.jdbc4.JDBC4Connection.prepareStatement(JDBC4Connection.java:31)
+	at org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:225)
+	at org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:205)
+	at org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:210)
+	at com.iae.service.ProjectService.save(ProjectService.java:71)
+	at com.iae.Main.main(Main.java:56)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.codehaus.mojo.exec.AbstractExecJavaBase.executeMainMethod(AbstractExecJavaBase.java:402)
+	at org.codehaus.mojo.exec.ExecJavaMojo.executeMainMethod(ExecJavaMojo.java:142)
+	at org.codehaus.mojo.exec.AbstractExecJavaBase.doExecClassLoader(AbstractExecJavaBase.java:377)
+	at org.codehaus.mojo.exec.AbstractExecJavaBase.lambda$execute$0(AbstractExecJavaBase.java:287)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  3.450 s
+[INFO] Finished at: 2026-05-13T20:01:50+03:00
+[INFO] ------------------------------------------------------------------------

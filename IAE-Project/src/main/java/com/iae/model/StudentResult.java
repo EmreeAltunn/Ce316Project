@@ -1,136 +1,77 @@
 package com.iae.model;
 
-public class StudentResult {
+import java.time.LocalDateTime;
 
+public class StudentResult {
     private int id;
     private int projectId;
     private String studentId;
-    private String zipFileName;
-    private String extractedFolderPath;
-    private String compileStatus;
-    private String runStatus;
-    private String outputStatus;
-    private String actualOutput;
-    private String expectedOutputSnapshot;
-    private String errorMessage;
-    private String processedAt;
+    private String zipFilePath;
+    private ResultStatus compileStatus;
+    private String compileOutput;
+    private String compileError;
+    private ResultStatus runStatus;
+    private String programOutput;
+    private String errorOutput;
+    private ResultStatus testStatus;
+    private String testDetails;
+    private LocalDateTime processedAt;
 
     public StudentResult() {
     }
 
-    public StudentResult(int id, int projectId, String studentId,
-            String zipFileName, String extractedFolderPath,
-            String compileStatus, String runStatus,
-            String outputStatus, String actualOutput,
-            String expectedOutputSnapshot, String errorMessage,
-            String processedAt) {
+    public StudentResult(int id, int projectId, String studentId, String zipFilePath, ResultStatus compileStatus, String compileOutput, String compileError, ResultStatus runStatus, String programOutput, String errorOutput, ResultStatus testStatus, String testDetails, LocalDateTime processedAt) {
         this.id = id;
         this.projectId = projectId;
         this.studentId = studentId;
-        this.zipFileName = zipFileName;
-        this.extractedFolderPath = extractedFolderPath;
+        this.zipFilePath = zipFilePath;
         this.compileStatus = compileStatus;
+        this.compileOutput = compileOutput;
+        this.compileError = compileError;
         this.runStatus = runStatus;
-        this.outputStatus = outputStatus;
-        this.actualOutput = actualOutput;
-        this.expectedOutputSnapshot = expectedOutputSnapshot;
-        this.errorMessage = errorMessage;
+        this.programOutput = programOutput;
+        this.errorOutput = errorOutput;
+        this.testStatus = testStatus;
+        this.testDetails = testDetails;
         this.processedAt = processedAt;
     }
 
-    public int getId() {
-        return id;
-    }
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+    public int getProjectId() { return projectId; }
+    public void setProjectId(int projectId) { this.projectId = projectId; }
 
-    public int getProjectId() {
-        return projectId;
-    }
+    public String getStudentId() { return studentId; }
+    public void setStudentId(String studentId) { this.studentId = studentId; }
 
-    public void setProjectId(int projectId) {
-        this.projectId = projectId;
-    }
+    public String getZipFilePath() { return zipFilePath; }
+    public void setZipFilePath(String zipFilePath) { this.zipFilePath = zipFilePath; }
 
-    public String getStudentId() {
-        return studentId;
-    }
+    public ResultStatus getCompileStatus() { return compileStatus; }
+    public void setCompileStatus(ResultStatus compileStatus) { this.compileStatus = compileStatus; }
 
-    public void setStudentId(String studentId) {
-        this.studentId = studentId;
-    }
+    public String getCompileOutput() { return compileOutput; }
+    public void setCompileOutput(String compileOutput) { this.compileOutput = compileOutput; }
 
-    public String getZipFileName() {
-        return zipFileName;
-    }
+    public String getCompileError() { return compileError; }
+    public void setCompileError(String compileError) { this.compileError = compileError; }
 
-    public void setZipFileName(String zipFileName) {
-        this.zipFileName = zipFileName;
-    }
+    public ResultStatus getRunStatus() { return runStatus; }
+    public void setRunStatus(ResultStatus runStatus) { this.runStatus = runStatus; }
 
-    public String getExtractedFolderPath() {
-        return extractedFolderPath;
-    }
+    public String getProgramOutput() { return programOutput; }
+    public void setProgramOutput(String programOutput) { this.programOutput = programOutput; }
 
-    public void setExtractedFolderPath(String extractedFolderPath) {
-        this.extractedFolderPath = extractedFolderPath;
-    }
+    public String getErrorOutput() { return errorOutput; }
+    public void setErrorOutput(String errorOutput) { this.errorOutput = errorOutput; }
 
-    public String getCompileStatus() {
-        return compileStatus;
-    }
+    public ResultStatus getTestStatus() { return testStatus; }
+    public void setTestStatus(ResultStatus testStatus) { this.testStatus = testStatus; }
 
-    public void setCompileStatus(String compileStatus) {
-        this.compileStatus = compileStatus;
-    }
+    public String getTestDetails() { return testDetails; }
+    public void setTestDetails(String testDetails) { this.testDetails = testDetails; }
 
-    public String getRunStatus() {
-        return runStatus;
-    }
-
-    public void setRunStatus(String runStatus) {
-        this.runStatus = runStatus;
-    }
-
-    public String getOutputStatus() {
-        return outputStatus;
-    }
-
-    public void setOutputStatus(String outputStatus) {
-        this.outputStatus = outputStatus;
-    }
-
-    public String getActualOutput() {
-        return actualOutput;
-    }
-
-    public void setActualOutput(String actualOutput) {
-        this.actualOutput = actualOutput;
-    }
-
-    public String getExpectedOutputSnapshot() {
-        return expectedOutputSnapshot;
-    }
-
-    public void setExpectedOutputSnapshot(String expectedOutputSnapshot) {
-        this.expectedOutputSnapshot = expectedOutputSnapshot;
-    }
-
-    public String getErrorMessage() {
-        return errorMessage;
-    }
-
-    public void setErrorMessage(String errorMessage) {
-        this.errorMessage = errorMessage;
-    }
-
-    public String getProcessedAt() {
-        return processedAt;
-    }
-
-    public void setProcessedAt(String processedAt) {
-        this.processedAt = processedAt;
-    }
+    public LocalDateTime getProcessedAt() { return processedAt; }
+    public void setProcessedAt(LocalDateTime processedAt) { this.processedAt = processedAt; }
 }
