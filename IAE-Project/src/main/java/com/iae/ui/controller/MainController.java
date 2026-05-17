@@ -138,6 +138,7 @@ public class MainController {
             dialog.initOwner(getStage());
             dialog.showAndWait();
         } catch (IOException e) {
+            e.printStackTrace();
             showError("Cannot open Configurations", e.getMessage());
         }
     }
@@ -192,6 +193,7 @@ public class MainController {
             activeProjectController = null;
             ctrl.startRun(project, config, testCases, this);
         } catch (IOException e) {
+            e.printStackTrace();
             showError("Cannot open Runner", e.getMessage());
         }
     }
@@ -205,6 +207,7 @@ public class MainController {
             setContent(root);
             ctrl.setResults(results);
         } catch (IOException e) {
+            e.printStackTrace();
             showError("Cannot open Results", e.getMessage());
         }
     }
@@ -222,6 +225,7 @@ public class MainController {
             setContent(root);
             activeProjectController = ctrl;
         } catch (IOException e) {
+            e.printStackTrace();
             showError("Cannot open Project view", e.getMessage());
         }
     }

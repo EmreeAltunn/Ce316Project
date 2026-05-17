@@ -23,8 +23,10 @@
     <Label fx:id="summaryLabel" text="" style="-fx-text-fill: #616161;"/>
     <Separator/>
 
-    <TableView fx:id="resultsTable" VBox.vgrow="ALWAYS"
-               placeholder="No results.">
+    <TableView fx:id="resultsTable" VBox.vgrow="ALWAYS">
+        <placeholder>
+            <Label text="No results."/>
+        </placeholder>
         <columns>
             <TableColumn fx:id="studentIdColumn"     text="Student ID"     prefWidth="140"/>
             <TableColumn fx:id="compileStatusColumn" text="Compile"        prefWidth="100"/>

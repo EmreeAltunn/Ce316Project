@@ -48,8 +48,10 @@
         <Label text="Test Cases"
                style="-fx-font-weight: bold; -fx-text-fill: #1A237E;"/>
 
-        <TableView fx:id="testCasesTable" prefHeight="180"
-                   placeholder="No test cases. Click 'Add Test Case' to create one.">
+        <TableView fx:id="testCasesTable" prefHeight="180">
+            <placeholder>
+                <Label text="No test cases. Click 'Add Test Case' to create one."/>
+            </placeholder>
             <columns>
                 <TableColumn fx:id="testNameColumn"     text="Name"            prefWidth="160"/>
                 <TableColumn fx:id="testArgsColumn"     text="Input Args"      prefWidth="220"/>
