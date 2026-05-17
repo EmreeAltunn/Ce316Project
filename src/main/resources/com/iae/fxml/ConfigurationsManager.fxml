@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<!--
+  ConfigurationsManager.fxml
+  Opens as a modal dialog from MainController.handleManageConfigurations().
+  Shows the full list of configurations with CRUD and import/export actions.
+-->
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.iae.ui.controller.ConfigurationsManagerController"
+      spacing="10"
+      prefWidth="720"
+      prefHeight="520"
+      style="-fx-background-color: #FAFAFA;">
+
+    <padding>
+        <Insets top="20" right="24" bottom="20" left="24"/>
+    </padding>
+
+    <!-- Header -->
+    <Label text="Manage Configurations"
+           style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #1A237E;"/>
+
+    <Label text="Create, edit, delete, import and export language configurations."
+           style="-fx-text-fill: #616161;"/>
+
+    <Separator/>
+
+    <!-- Table -->
+    <TableView fx:id="configurationsTable"
+               VBox.vgrow="ALWAYS"
+               placeholder="No configurations yet. Click 'New' to create one.">
+        <columns>
+            <TableColumn fx:id="nameColumn"     text="Name"          prefWidth="200"/>
+            <TableColumn fx:id="typeColumn"     text="Type"          prefWidth="100"/>
+            <TableColumn fx:id="compilerColumn" text="Compiler Path" prefWidth="200"/>
+            <TableColumn fx:id="sourceColumn"   text="Source File"   prefWidth="110"/>
+            <TableColumn fx:id="extensionColumn" text="Extension"    prefWidth="80"/>
+        </columns>
+    </TableView>
+
+    <!-- Action buttons -->
+    <HBox spacing="8" alignment="CENTER_LEFT">
+
+        <!-- Left: CRUD -->
+        <Button fx:id="newButton"
+                text="New"
+                onAction="#handleNew"
+                style="-fx-background-color: #1565C0; -fx-text-fill: white;"
+                prefWidth="70"/>
+        <Button fx:id="editButton"
+                text="Edit"
+                onAction="#handleEdit"
+                prefWidth="70"/>
+        <Button fx:id="deleteButton"
+                text="Delete"
+                onAction="#handleDelete"
+                style="-fx-text-fill: #C62828;"
+                prefWidth="70"/>
+
+        <Separator orientation="VERTICAL"/>
+
+        <!-- Right: Import / Export -->
+        <Button fx:id="importButton"
+                text="Import…"
+                onAction="#handleImport"/>
+        <Button fx:id="exportButton"
+                text="Export Selected…"
+                onAction="#handleExport"/>
+        <Button fx:id="exportAllButton"
+                text="Export All…"
+                onAction="#handleExportAll"/>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <Button fx:id="closeButton"
+                text="Close"
+                onAction="#handleClose"
+                prefWidth="70"/>
+    </HBox>
+
+    <!-- Status / feedback line -->
+    <Label fx:id="statusLabel"
+           text=""
+           wrapText="true"
+           style="-fx-font-size: 12px;"/>
+
+</VBox>
