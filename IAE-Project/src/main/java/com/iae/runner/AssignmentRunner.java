@@ -17,11 +17,14 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class AssignmentRunner {
 
@@ -142,11 +145,22 @@ public class AssignmentRunner {
                     new File(project.getWorkingDirectory())
             );
 
-            if (config.isRequiresCompilation()) {
-                compile(result, config, studentDir);
+            File sourceFile = locateSourceFile(studentDir, config.getSourceFileName());
+
+            if (sourceFile == null) {
+                markMissingSource(result, config, studentDir);
+                return result;
+            }
+
+            File executionDir = sourceFile.getParentFile() != null
+                    ? sourceFile.getParentFile()
+                    : studentDir;
+
+            if (shouldCompile(config)) {
+                compile(result, config, executionDir, sourceFile);
             } else {
                 result.setCompileStatus(ResultStatus.SKIPPED);
-                result.setCompileOutput("Compilation skipped for interpreted language.");
+                result.setCompileOutput(getCompileSkipMessage(config));
             }
 
             if (result.getCompileStatus() == ResultStatus.FAILED) {
@@ -164,7 +178,7 @@ public class AssignmentRunner {
                 return result;
             }
 
-            runTestCases(result, testCases, config, studentDir);
+            runTestCases(result, testCases, config, executionDir, sourceFile);
         } catch (Exception e) {
             if (result.getCompileStatus() == ResultStatus.PENDING) {
                 result.setCompileStatus(ResultStatus.ERROR);
@@ -182,36 +196,37 @@ public class AssignmentRunner {
 
     private void compile(StudentResult result,
                          Configuration config,
-                         File studentDir) {
+                         File executionDir,
+                         File sourceFile) {
 
         try {
             if (isBlank(config.getCompilerPath())) {
-                result.setCompileStatus(ResultStatus.FAILED);
-                result.setCompileError("Compiler path is empty.");
+                result.setCompileStatus(ResultStatus.SKIPPED);
+                result.setCompileOutput(getCompileSkipMessage(config));
                 return;
             }
-
-            String outputFileName = !isBlank(config.getOutputFileName())
-                    ? config.getOutputFileName()
-                    : "output";
 
             String compilerArgs = config.getCompilerArgs() == null
                     ? ""
                     : config.getCompilerArgs();
 
-            compilerArgs = compilerArgs
-                    .replace("{source}", config.getSourceFileName())
-                    .replace("{output}", outputFileName)
-                    .replace("{executable}", outputFileName)
-                    .replace("{args}", "");
+            compilerArgs = applyCommandPlaceholders(
+                    compilerArgs,
+                    config,
+                    sourceFile,
+                    ""
+            );
 
             List<String> commandParts = new ArrayList<>();
             commandParts.add(config.getCompilerPath());
             commandParts.addAll(splitCommand(compilerArgs));
 
-            ProcessResult processResult = processExecutor.execute(commandParts, studentDir);
+            ProcessResult processResult = processExecutor.execute(commandParts, executionDir);
 
-            result.setCompileOutput(processResult.getStdout());
+            result.setCompileOutput(appendLine(
+                    processResult.getStdout(),
+                    "Exit code: " + processResult.getExitCode()
+            ));
             result.setCompileError(processResult.getStderr());
 
             if (processResult.isTimedOut()) {
@@ -225,17 +240,23 @@ public class AssignmentRunner {
                                 ? ResultStatus.SUCCESS
                                 : ResultStatus.FAILED
                 );
+
+                if (result.getCompileStatus() == ResultStatus.FAILED
+                        && isBlank(result.getCompileError())) {
+                    result.setCompileError("Compilation failed with exit code " + processResult.getExitCode() + ".");
+                }
             }
         } catch (IOException e) {
             result.setCompileStatus(ResultStatus.FAILED);
-            result.setCompileError(e.getMessage());
+            result.setCompileError("Could not start compiler: " + e.getMessage());
         }
     }
 
     private void runTestCases(StudentResult result,
                               List<TestCase> testCases,
                               Configuration config,
-                              File studentDir) {
+                              File executionDir,
+                              File sourceFile) {
 
         List<TestCase> orderedTestCases = new ArrayList<>(testCases);
         orderedTestCases.sort(Comparator.comparingInt(TestCase::getOrderIndex));
@@ -249,7 +270,7 @@ public class AssignmentRunner {
         boolean atLeastOneCompared = false;
 
         for (TestCase testCase : orderedTestCases) {
-            SingleTestOutcome outcome = runSingleTestCase(testCase, config, studentDir);
+            SingleTestOutcome outcome = runSingleTestCase(testCase, config, executionDir, sourceFile);
 
             if (!isBlank(outcome.stdout)) {
                 allProgramOutput
@@ -317,37 +338,52 @@ public class AssignmentRunner {
 
     private SingleTestOutcome runSingleTestCase(TestCase testCase,
                                                 Configuration config,
-                                                File studentDir) {
+                                                File executionDir,
+                                                File sourceFile) {
 
         SingleTestOutcome outcome = new SingleTestOutcome();
 
         try {
-            String executable = !isBlank(config.getOutputFileName())
-                    ? config.getOutputFileName()
-                    : config.getSourceFileName();
+            if (isBlank(config.getRunCommand())) {
+                outcome.runStatus = ResultStatus.FAILED;
+                outcome.testStatus = ResultStatus.ERROR;
+                outcome.details = "Run command is empty.";
+                return outcome;
+            }
 
             String inputArgs = testCase.getInputArgs() != null
                     ? testCase.getInputArgs()
                     : "";
 
-            String command = config.getRunCommand()
-                    .replace("{executable}", executable)
-                    .replace("{args}", inputArgs)
-                    .replace("{source}", config.getSourceFileName())
-                    .replace("{output}", executable);
+            String command = applyCommandPlaceholders(
+                    config.getRunCommand(),
+                    config,
+                    sourceFile,
+                    inputArgs
+            );
+
+            List<String> commandParts = splitCommand(command);
+
+            if (commandParts.isEmpty()) {
+                outcome.runStatus = ResultStatus.FAILED;
+                outcome.testStatus = ResultStatus.ERROR;
+                outcome.details = "Run command is empty after applying arguments.";
+                return outcome;
+            }
 
             ProcessResult processResult = processExecutor.execute(
-                    splitCommand(command),
-                    studentDir
+                    commandParts,
+                    executionDir
             );
 
             outcome.stdout = processResult.getStdout();
             outcome.stderr = processResult.getStderr();
+            outcome.exitCode = processResult.getExitCode();
 
             if (processResult.isTimedOut()) {
                 outcome.runStatus = ResultStatus.FAILED;
                 outcome.testStatus = ResultStatus.ERROR;
-                outcome.details = "Execution timed out.";
+                outcome.details = withExitCode("Execution timed out.", processResult.getExitCode());
                 return outcome;
             }
 
@@ -357,26 +393,45 @@ public class AssignmentRunner {
 
             if (outcome.runStatus == ResultStatus.FAILED) {
                 outcome.testStatus = ResultStatus.ERROR;
-                outcome.details = "Program exited with code " + processResult.getExitCode();
+                outcome.details = withExitCode(
+                        "Program exited with code " + processResult.getExitCode() + ".",
+                        processResult.getExitCode()
+                );
                 return outcome;
             }
 
             if (!isBlank(testCase.getExpectedOutputFile())) {
+                File expectedOutputFile = new File(testCase.getExpectedOutputFile());
+
+                if (!expectedOutputFile.exists() || !expectedOutputFile.isFile()) {
+                    outcome.testStatus = ResultStatus.ERROR;
+                    outcome.details = withExitCode(
+                            "Expected output file not found: " + expectedOutputFile.getAbsolutePath(),
+                            processResult.getExitCode()
+                    );
+                    return outcome;
+                }
+
                 ComparisonResult comparisonResult = outputComparator.compareWithFile(
                         processResult.getStdout(),
-                        new File(testCase.getExpectedOutputFile())
+                        expectedOutputFile
                 );
 
                 outcome.testStatus = comparisonResult.isMatch()
                         ? ResultStatus.PASS
                         : ResultStatus.FAIL;
 
-                outcome.details = comparisonResult.getDifferences().isEmpty()
+                String comparisonDetails = comparisonResult.getDifferences().isEmpty()
                         ? "Output matches expected output."
                         : String.join("\n", comparisonResult.getDifferences());
+
+                outcome.details = withExitCode(comparisonDetails, processResult.getExitCode());
             } else {
                 outcome.testStatus = ResultStatus.SKIPPED;
-                outcome.details = "Expected output file was not provided.";
+                outcome.details = withExitCode(
+                        "Expected output file was not provided.",
+                        processResult.getExitCode()
+                );
             }
         } catch (Exception e) {
             outcome.runStatus = ResultStatus.FAILED;
@@ -386,6 +441,73 @@ public class AssignmentRunner {
         }
 
         return outcome;
+    }
+
+    private File locateSourceFile(File studentDir, String sourceFileName) throws IOException {
+        if (studentDir == null || isBlank(sourceFileName)) {
+            return null;
+        }
+
+        File directMatch = new File(studentDir, sourceFileName);
+        if (directMatch.exists() && directMatch.isFile()) {
+            return directMatch;
+        }
+
+        String requiredFileName = new File(sourceFileName).getName();
+        List<File> matches = new ArrayList<>();
+
+        try (Stream<Path> paths = Files.walk(studentDir.toPath())) {
+            paths
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().equals(requiredFileName))
+                    .map(Path::toFile)
+                    .forEach(matches::add);
+        }
+
+        if (matches.isEmpty()) {
+            return null;
+        }
+
+        matches.sort(Comparator.comparing(File::getAbsolutePath));
+        return matches.get(0);
+    }
+
+    private void markMissingSource(StudentResult result,
+                                   Configuration config,
+                                   File studentDir) {
+
+        String message = "Required source file not found: "
+                + config.getSourceFileName()
+                + " under "
+                + studentDir.getAbsolutePath();
+
+        if (shouldCompile(config)) {
+            result.setCompileStatus(ResultStatus.FAILED);
+            result.setCompileError(message);
+        } else {
+            result.setCompileStatus(ResultStatus.SKIPPED);
+            result.setCompileOutput(getCompileSkipMessage(config));
+        }
+
+        result.setRunStatus(ResultStatus.SKIPPED);
+        result.setErrorOutput(message);
+        result.setTestStatus(ResultStatus.ERROR);
+        result.setTestDetails(message);
+        result.setProcessedAt(LocalDateTime.now());
+    }
+
+    private boolean shouldCompile(Configuration config) {
+        return config != null
+                && config.isRequiresCompilation()
+                && !isBlank(config.getCompilerPath());
+    }
+
+    private String getCompileSkipMessage(Configuration config) {
+        if (config != null && config.isRequiresCompilation()) {
+            return "Compilation skipped because no compiler command is configured.";
+        }
+
+        return "Compilation skipped for interpreted language.";
     }
 
     private File[] listZipFiles(File submissionsDir) throws IOException {
@@ -481,8 +603,107 @@ public class AssignmentRunner {
             return parts;
         }
 
-        parts.addAll(Arrays.asList(trimmed.split("\\s+")));
+        StringBuilder current = new StringBuilder();
+        boolean inQuote = false;
+        char quoteChar = 0;
+
+        for (int i = 0; i < trimmed.length(); i++) {
+            char ch = trimmed.charAt(i);
+
+            if (inQuote) {
+                if (ch == quoteChar) {
+                    inQuote = false;
+                } else {
+                    current.append(ch);
+                }
+                continue;
+            }
+
+            if (ch == '"' || ch == '\'') {
+                inQuote = true;
+                quoteChar = ch;
+            } else if (Character.isWhitespace(ch)) {
+                if (current.length() > 0) {
+                    parts.add(current.toString());
+                    current.setLength(0);
+                }
+            } else {
+                current.append(ch);
+            }
+        }
+
+        if (current.length() > 0) {
+            parts.add(current.toString());
+        }
+
         return parts;
+    }
+
+    private String applyCommandPlaceholders(String command,
+                                            Configuration config,
+                                            File sourceFile,
+                                            String args) {
+
+        if (command == null) {
+            return "";
+        }
+
+        String sourceName = sourceFile != null
+                ? sourceFile.getName()
+                : valueOrEmpty(config.getSourceFileName());
+        String sourcePath = sourceFile != null
+                ? sourceFile.getPath()
+                : sourceName;
+        String sourceAbsolutePath = sourceFile != null
+                ? sourceFile.getAbsolutePath()
+                : sourcePath;
+        String sourceBaseName = removeExtension(sourceName);
+        String executable = getExecutableName(config, sourceFile);
+        String safeArgs = args == null ? "" : args;
+
+        return command
+                .replace("{source}", sourceName)
+                .replace("{sourcePath}", sourcePath)
+                .replace("{sourceAbsolute}", sourceAbsolutePath)
+                .replace("{sourceBase}", sourceBaseName)
+                .replace("{output}", executable)
+                .replace("{executable}", executable)
+                .replace("{args}", safeArgs);
+    }
+
+    private String getExecutableName(Configuration config, File sourceFile) {
+        if (config != null && !isBlank(config.getOutputFileName())) {
+            return config.getOutputFileName();
+        }
+
+        if (shouldCompile(config)) {
+            return "output";
+        }
+
+        return sourceFile != null
+                ? sourceFile.getName()
+                : valueOrEmpty(config.getSourceFileName());
+    }
+
+    private String removeExtension(String fileName) {
+        if (isBlank(fileName)) {
+            return "";
+        }
+
+        int extensionStart = fileName.lastIndexOf('.');
+        if (extensionStart <= 0) {
+            return fileName;
+        }
+
+        return fileName.substring(0, extensionStart);
+    }
+
+    private String valueOrEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
+    private String withExitCode(String details, int exitCode) {
+        return appendLine("Exit code: " + exitCode, details);
     }
 
     private boolean isBlank(String value) {
@@ -500,6 +721,7 @@ public class AssignmentRunner {
     private static class SingleTestOutcome {
         private ResultStatus runStatus = ResultStatus.PENDING;
         private ResultStatus testStatus = ResultStatus.PENDING;
+        private int exitCode = 0;
         private String stdout = "";
         private String stderr = "";
         private String details = "";
