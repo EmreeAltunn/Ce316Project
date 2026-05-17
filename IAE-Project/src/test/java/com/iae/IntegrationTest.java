@@ -7,6 +7,7 @@ import com.iae.model.TestCase;
 import com.iae.service.ConfigurationService;
 import com.iae.service.ProjectService;
 import com.iae.service.TestCaseService;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -42,6 +43,13 @@ class IntegrationTest {
         configurationService = new ConfigurationService(dbManager);
         projectService = new ProjectService(dbManager);
         testCaseService = new TestCaseService(dbManager);
+    }
+
+    @AfterAll
+    static void tearDown() throws SQLException {
+        if (dbManager != null) {
+            dbManager.close();
+        }
     }
 
     private Configuration newConfiguration(String name) {
@@ -114,6 +122,7 @@ class IntegrationTest {
         testCase.setInputArgs("5 4 3 2 1");
         testCase.setExpectedOutputFile("expected.txt");
         testCase.setOrderIndex(0);
+
         TestCase savedTestCase = testCaseService.save(testCase);
         assertTrue(savedTestCase.getId() > 0, "Saved test case should get a generated id");
 
@@ -121,6 +130,7 @@ class IntegrationTest {
         assertEquals(1, afterSave.size(), "Project should have exactly one test case");
 
         testCaseService.delete(savedTestCase.getId());
+
         List<TestCase> afterDelete = testCaseService.findByProjectId(savedProject.getId());
         assertTrue(afterDelete.isEmpty(), "Test case should be removed after delete");
     }
