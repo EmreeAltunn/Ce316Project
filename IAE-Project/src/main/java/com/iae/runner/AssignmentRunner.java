@@ -163,7 +163,7 @@ public class AssignmentRunner {
                 result.setCompileOutput(getCompileSkipMessage(config));
             }
 
-            if (result.getCompileStatus() == ResultStatus.FAILED) {
+            if (isCompileBlocking(result.getCompileStatus())) {
                 result.setRunStatus(ResultStatus.SKIPPED);
                 result.setTestStatus(ResultStatus.SKIPPED);
                 result.setProcessedAt(LocalDateTime.now());
@@ -246,7 +246,7 @@ public class AssignmentRunner {
                     result.setCompileError("Compilation failed with exit code " + processResult.getExitCode() + ".");
                 }
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             result.setCompileStatus(ResultStatus.FAILED);
             result.setCompileError("Could not start compiler: " + e.getMessage());
         }
@@ -500,6 +500,11 @@ public class AssignmentRunner {
         return config != null
                 && config.isRequiresCompilation()
                 && !isBlank(config.getCompilerPath());
+    }
+
+    private boolean isCompileBlocking(ResultStatus compileStatus) {
+        return compileStatus != ResultStatus.SUCCESS
+                && compileStatus != ResultStatus.SKIPPED;
     }
 
     private String getCompileSkipMessage(Configuration config) {
