@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>IAE — User Manual</title>
+<style>
+  body { font-family: "Segoe UI", Arial, sans-serif; margin: 0; padding: 0 32px 48px;
+         color: #263238; line-height: 1.55; max-width: 820px; }
+  h1 { color: #1A237E; border-bottom: 3px solid #1565C0; padding-bottom: 8px; }
+  h2 { color: #1565C0; margin-top: 32px; }
+  code { background: #ECEFF1; padding: 1px 5px; border-radius: 3px; font-size: 0.92em; }
+  nav { background: #FAFAFA; border: 1px solid #E0E0E0; border-radius: 6px;
+        padding: 12px 20px; margin: 20px 0; }
+  nav a { color: #1565C0; text-decoration: none; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th, td { border: 1px solid #CFD8DC; padding: 6px 10px; text-align: left; }
+  th { background: #ECEFF1; }
+  .tip { background: #E8F5E9; border-left: 4px solid #2E7D32; padding: 8px 14px; margin: 12px 0; }
+</style>
+</head>
+<body>
+
+<h1>IAE — Integrated Assignment Environment</h1>
+<p>IAE, programlama odevlerini otomatik olarak derleyip calistirip beklenen
+ciktiyla karsilastiran bir masaustu uygulamasidir.</p>
+
+<nav>
+<strong>Contents:</strong>
+<a href="#start">Getting Started</a> &middot;
+<a href="#config">Creating a Configuration</a> &middot;
+<a href="#impexp">Importing / Exporting Configurations</a> &middot;
+<a href="#project">Creating a Project</a> &middot;
+<a href="#tests">Adding Test Cases</a> &middot;
+<a href="#run">Running an Assignment</a> &middot;
+<a href="#results">Viewing Results</a> &middot;
+<a href="#trouble">Troubleshooting</a>
+</nav>
+
+<h2 id="start">Getting Started</h2>
+<p>Uygulamayi baslattiginizda ana pencere acilir. Tum veriler kullanici
+ev dizininizdeki <code>.iae</code> klasorunde bir SQLite veritabaninda saklanir.
+Tipik akis: once bir <em>Configuration</em> tanimlayin, sonra bir <em>Project</em>
+olusturun, test case ekleyin ve odevi calistirin.</p>
+
+<h2 id="config">Creating a Configuration</h2>
+<p><strong>Configuration &gt; Manage Configurations</strong> menusunu acin ve
+<strong>New</strong> butonuna basin. Bir konfigurasyon kullanilan programlama
+dilini tanimlar:</p>
+<table>
+<tr><th>Field</th><th>Description</th></tr>
+<tr><td>Name</td><td>Konfigurasyon adi (benzersiz)</td></tr>
+<tr><td>Compiler Path</td><td>Derleyici yolu, orn. <code>gcc</code> (yorumlanan dillerde bos)</td></tr>
+<tr><td>Compiler Args</td><td>Derleme argumanlari, <code>{source}</code> ve <code>{output}</code> kullanir</td></tr>
+<tr><td>Run Command</td><td>Calistirma komutu, <code>{executable}</code> ve <code>{args}</code> kullanir</td></tr>
+<tr><td>Requires Compilation</td><td>C/Java icin isaretli, Python gibi dillerde isaretsiz</td></tr>
+<tr><td>Source / Output File</td><td>Kaynak dosya adi ve derlenmis cikti adi</td></tr>
+</table>
+<div class="tip">Placeholder'lar: <code>{source}</code>, <code>{output}</code>,
+<code>{executable}</code>, <code>{args}</code> calisma sirasinda otomatik doldurulur.</div>
+
+<h2 id="impexp">Importing / Exporting Configurations</h2>
+<p>Manage Configurations ekraninda <strong>Import…</strong> ile bir
+<code>.iaeconfig</code> dosyasini iceri aktarabilir, <strong>Export Selected…</strong>
+veya <strong>Export All…</strong> ile konfigurasyonlari disa aktarabilirsiniz.
+Bu, konfigurasyonlari ekip arkadaslariyla paylasmayi kolaylastirir.</p>
+
+<h2 id="project">Creating a Project</h2>
+<p><strong>File &gt; New Project</strong> menusunu secin. Proje adini girin,
+bir konfigurasyon secin ve iki dizini belirleyin:</p>
+<ul>
+<li><strong>Submissions Directory</strong> — ogrenci ZIP dosyalarinin bulundugu klasor</li>
+<li><strong>Working Directory</strong> — ZIP'lerin acilacagi calisma klasoru</li>
+</ul>
+<p><strong>Save Project</strong> ile projeyi kaydedin. Daha sonra
+<strong>File &gt; Open Project</strong> ile geri yukleyebilirsiniz.</p>
+
+<h2 id="tests">Adding Test Cases</h2>
+<p>Proje formunda <strong>Add Test Case</strong> butonuna basin. Her test case
+icin bir ad, opsiyonel girdi argumanlari ve opsiyonel bir beklenen cikti dosyasi
+belirtebilirsiniz. Bir test case'i kaldirmak icin tablodan secip
+<strong>Remove Test Case</strong> kullanin.</p>
+
+<h2 id="run">Running an Assignment</h2>
+<p>Proje formunda <strong>Run Assignment</strong> butonuna basin. IAE tum ZIP
+dosyalarini acar, her ogrenci icin kaynak kodu derler (gerekiyorsa), calistirir
+ve ciktiyi beklenen ciktiyla karsilastirir. Ilerleme cubugu ve canli log
+calisma sirasinda guncellenir.</p>
+
+<h2 id="results">Viewing Results</h2>
+<p>Calisma bitince <strong>View Results</strong> butonu etkinlesir. Sonuc
+tablosu her ogrenci icin derleme, calistirma ve test durumunu gosterir.
+<strong>Export CSV…</strong> ile sonuclari bir CSV dosyasina aktarabilirsiniz.</p>
+
+<h2 id="trouble">Troubleshooting</h2>
+<table>
+<tr><th>Problem</th><th>Solution</th></tr>
+<tr><td>Derleyici bulunamadi</td><td>Configuration ekraninda <strong>Test Compiler</strong> ile yolu dogrulayin</td></tr>
+<tr><td>ZIP acilmiyor</td><td>Dosyanin gecerli bir ZIP oldugundan ve bozuk olmadigindan emin olun</td></tr>
+<tr><td>Tum testler FAIL</td><td>Beklenen cikti dosyasi yolunu ve run komutunu kontrol edin</td></tr>
+<tr><td>Program takiliyor</td><td>Calisma 30 saniye sonra otomatik olarak zaman asimina ugrar</td></tr>
+</table>
+
+<hr>
+<p style="color:#90A4AE;font-size:0.85em;">IAE 1.0.0 — CE316 group project.</p>
+
+</body>
+</html>

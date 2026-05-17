@@ -32,8 +32,10 @@
 
     <!-- Table -->
     <TableView fx:id="configurationsTable"
-               VBox.vgrow="ALWAYS"
-               placeholder="No configurations yet. Click 'New' to create one.">
+               VBox.vgrow="ALWAYS">
+        <placeholder>
+            <Label text="No configurations yet. Click 'New' to create one."/>
+        </placeholder>
         <columns>
             <TableColumn fx:id="nameColumn"     text="Name"          prefWidth="200"/>
             <TableColumn fx:id="typeColumn"     text="Type"          prefWidth="100"/>

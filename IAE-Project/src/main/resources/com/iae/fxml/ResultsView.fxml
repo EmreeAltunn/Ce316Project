@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<!--
+  ResultsView.fxml
+  Ogrenci sonuclari tablosu ve CSV disa aktarma.
+-->
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.iae.ui.controller.ResultsController"
+      spacing="10"
+      style="-fx-background-color: #FAFAFA;">
+
+    <padding>
+        <Insets top="20" right="24" bottom="20" left="24"/>
+    </padding>
+
+    <Label text="Results"
+           style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #1A237E;"/>
+    <Label fx:id="summaryLabel" text="" style="-fx-text-fill: #616161;"/>
+    <Separator/>
+
+    <TableView fx:id="resultsTable" VBox.vgrow="ALWAYS">
+        <placeholder>
+            <Label text="No results."/>
+        </placeholder>
+        <columns>
+            <TableColumn fx:id="studentIdColumn"     text="Student ID"     prefWidth="140"/>
+            <TableColumn fx:id="compileStatusColumn" text="Compile"        prefWidth="100"/>
+            <TableColumn fx:id="runStatusColumn"     text="Run"            prefWidth="100"/>
+            <TableColumn fx:id="testStatusColumn"    text="Test"           prefWidth="100"/>
+            <TableColumn fx:id="errorColumn"         text="Error / Details" prefWidth="380"/>
+        </columns>
+    </TableView>
+
+    <HBox spacing="8">
+        <Button fx:id="exportCsvButton" text="Export CSV…" onAction="#handleExportCsv"
+                style="-fx-background-color: #1565C0; -fx-text-fill: white;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+    </HBox>
+
+    <Label fx:id="statusLabel" wrapText="true" style="-fx-font-size: 12px;"/>
+
+</VBox>
