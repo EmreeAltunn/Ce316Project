@@ -4,7 +4,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -46,9 +50,17 @@ public class ZipProcessor {
 
         String studentId = getStudentIdFromZip(zipFile);
         File studentDir = new File(targetDirectory, studentId);
-        createDirectory(studentDir, "student extraction directory");
+        String targetRootPath = targetDirectory.getCanonicalPath();
+        String studentDirPath = studentDir.getCanonicalPath();
 
-        String studentRootPath = studentDir.getCanonicalPath();
+        if (studentDirPath.equals(targetRootPath) || !isInsideDirectory(targetRootPath, studentDirPath)) {
+            throw new IOException("Student extraction directory escapes working directory: " + studentId);
+        }
+
+        createDirectory(studentDir, "student extraction directory");
+        clearDirectory(studentDir);
+
+        String studentRootPath = studentDirPath;
 
         try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile))) {
             ZipEntry entry;
@@ -180,6 +192,29 @@ public class ZipProcessor {
             throw new IOException(
                     "Could not create " + description + ": " + directory.getAbsolutePath()
             );
+        }
+    }
+
+    private void clearDirectory(File directory) throws IOException {
+        if (directory == null || !directory.exists()) {
+            return;
+        }
+
+        Path root = directory.toPath();
+
+        try (var paths = Files.walk(root)) {
+            paths
+                    .sorted(Comparator.reverseOrder())
+                    .filter(path -> !path.equals(root))
+                    .forEach(path -> {
+                        try {
+                            Files.deleteIfExists(path);
+                        } catch (IOException e) {
+                            throw new UncheckedIOException(e);
+                        }
+                    });
+        } catch (UncheckedIOException e) {
+            throw e.getCause();
         }
     }
 }

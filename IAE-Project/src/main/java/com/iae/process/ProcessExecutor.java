@@ -12,6 +12,10 @@ public class ProcessExecutor {
     public static final int DEFAULT_TIMEOUT_SECONDS = 30;
 
     public ProcessResult execute(String command, File workingDir) throws IOException {
+        if (command == null || command.trim().isEmpty()) {
+            throw new IOException("Command must not be empty.");
+        }
+
         String[] parts = command.trim().split("\\s+");
         return execute(Arrays.asList(parts), workingDir);
     }
@@ -21,6 +25,21 @@ public class ProcessExecutor {
     }
 
     public ProcessResult execute(List<String> commandParts, File workingDir, int timeoutSeconds) throws IOException {
+        if (commandParts == null || commandParts.isEmpty()) {
+            throw new IOException("Command must not be empty.");
+        }
+
+        if (commandParts.get(0) == null || commandParts.get(0).trim().isEmpty()) {
+            throw new IOException("Executable command must not be empty.");
+        }
+
+        if (workingDir == null || !workingDir.exists() || !workingDir.isDirectory()) {
+            throw new IOException(
+                    "Working directory not found: "
+                            + (workingDir == null ? "null" : workingDir.getAbsolutePath())
+            );
+        }
+
         long startTime = System.currentTimeMillis();
 
         ProcessBuilder builder = new ProcessBuilder(commandParts);
@@ -49,6 +68,12 @@ public class ProcessExecutor {
 
         if (timedOut) {
             process.destroyForcibly();
+
+            try {
+                process.waitFor(1, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
 
         try {
