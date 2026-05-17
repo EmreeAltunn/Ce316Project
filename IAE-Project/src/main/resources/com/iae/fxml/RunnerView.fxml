@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<!--
+  RunnerView.fxml
+  Calisma sirasinda canli ilerleme ve log ekrani.
+-->
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.iae.ui.controller.RunnerController"
+      spacing="10"
+      style="-fx-background-color: #FAFAFA;">
+
+    <padding>
+        <Insets top="20" right="24" bottom="20" left="24"/>
+    </padding>
+
+    <Label text="Running Assignment"
+           style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #1A237E;"/>
+    <Separator/>
+
+    <ProgressBar fx:id="progressBar" progress="0.0" maxWidth="Infinity"/>
+    <Label fx:id="progressLabel" text="0 / 0 students processed"/>
+
+    <TextArea fx:id="logTextArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS"/>
+
+    <HBox spacing="8">
+        <Button fx:id="cancelButton" text="Cancel" onAction="#handleCancel"
+                style="-fx-text-fill: #C62828;"/>
+        <Button fx:id="viewResultsButton" text="View Results" onAction="#handleViewResults"
+                disable="true"
+                style="-fx-background-color: #1565C0; -fx-text-fill: white;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+    </HBox>
+
+</VBox>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<!--
+  ProjectView.fxml
+  Proje olusturma/duzenleme formu. MainController contentArea'sina yuklenir.
+-->
+<ScrollPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.iae.ui.controller.ProjectController"
+            fitToWidth="true"
+            style="-fx-background-color: #FAFAFA;">
+
+    <VBox spacing="10">
+        <padding>
+            <Insets top="20" right="24" bottom="20" left="24"/>
+        </padding>
+
+        <Label text="Project"
+               style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #1A237E;"/>
+        <Separator/>
+
+        <Label text="Project Name"/>
+        <TextField fx:id="projectNameField" promptText="e.g. Sorting Assignment"/>
+
+        <Label text="Description"/>
+        <TextArea fx:id="projectDescriptionArea" prefRowCount="2" wrapText="true"/>
+
+        <Label text="Configuration"/>
+        <ComboBox fx:id="configurationComboBox" maxWidth="Infinity"/>
+
+        <Label text="Submissions Directory (ZIP files)"/>
+        <HBox spacing="8">
+            <TextField fx:id="submissionsDirectoryField" HBox.hgrow="ALWAYS"/>
+            <Button fx:id="browseSubmissionsButton" text="Browse…" onAction="#handleBrowseSubmissions"/>
+        </HBox>
+
+        <Label text="Working Directory (extraction target)"/>
+        <HBox spacing="8">
+            <TextField fx:id="workingDirectoryField" HBox.hgrow="ALWAYS"/>
+            <Button fx:id="browseWorkingDirButton" text="Browse…" onAction="#handleBrowseWorkingDir"/>
+        </HBox>
+
+        <Separator/>
+        <Label text="Test Cases"
+               style="-fx-font-weight: bold; -fx-text-fill: #1A237E;"/>
+
+        <TableView fx:id="testCasesTable" prefHeight="180"
+                   placeholder="No test cases. Click 'Add Test Case' to create one.">
+            <columns>
+                <TableColumn fx:id="testNameColumn"     text="Name"            prefWidth="160"/>
+                <TableColumn fx:id="testArgsColumn"     text="Input Args"      prefWidth="220"/>
+                <TableColumn fx:id="testExpectedColumn" text="Expected Output" prefWidth="320"/>
+            </columns>
+        </TableView>
+
+        <HBox spacing="8">
+            <Button fx:id="addTestCaseButton"    text="Add Test Case"    onAction="#handleAddTestCase"/>
+            <Button fx:id="removeTestCaseButton" text="Remove Test Case" onAction="#handleRemoveTestCase"/>
+        </HBox>
+
+        <Separator/>
+        <HBox spacing="8" alignment="CENTER_LEFT">
+            <Button fx:id="saveButton" text="Save Project" onAction="#handleSave"
+                    style="-fx-background-color: #1565C0; -fx-text-fill: white;"/>
+            <Button fx:id="runButton" text="Run Assignment" onAction="#handleRun"
+                    style="-fx-background-color: #2E7D32; -fx-text-fill: white;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+        </HBox>
+
+        <Label fx:id="statusLabel" wrapText="true" style="-fx-font-size: 12px;"/>
+    </VBox>
+
+</ScrollPane>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<!--
+  MainWindow.fxml
+  Application ana penceresi. Top: MenuBar, Center: view'larin yuklendigi StackPane.
+-->
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.iae.ui.controller.MainController"
+            prefWidth="980"
+            prefHeight="640">
+
+    <top>
+        <MenuBar>
+            <menus>
+                <Menu text="File">
+                    <items>
+                        <MenuItem fx:id="newProjectMenuItem"  text="New Project"  onAction="#handleNewProject"/>
+                        <MenuItem fx:id="openProjectMenuItem"  text="Open Project" onAction="#handleOpenProject"/>
+                        <MenuItem fx:id="saveProjectMenuItem"  text="Save Project" onAction="#handleSaveProject"/>
+                        <SeparatorMenuItem/>
+                        <MenuItem fx:id="exitMenuItem" text="Exit" onAction="#handleExit"/>
+                    </items>
+                </Menu>
+                <Menu text="Configuration">
+                    <items>
+                        <MenuItem fx:id="manageConfigurationsMenuItem"
+                                  text="Manage Configurations"
+                                  onAction="#handleManageConfigurations"/>
+                    </items>
+                </Menu>
+                <Menu text="Help">
+                    <items>
+                        <MenuItem fx:id="helpManualMenuItem" text="Manual" onAction="#handleHelpManual"/>
+                        <SeparatorMenuItem/>
+                        <MenuItem fx:id="aboutMenuItem" text="About" onAction="#handleAbout"/>
+                    </items>
+                </Menu>
+            </menus>
+        </MenuBar>
+    </top>
+
+    <center>
+        <StackPane fx:id="contentArea" style="-fx-background-color: #FAFAFA;"/>
+    </center>
+
+</BorderPane>
