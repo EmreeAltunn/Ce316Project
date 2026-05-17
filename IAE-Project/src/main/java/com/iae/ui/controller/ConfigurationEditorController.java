@@ -7,6 +7,7 @@ import com.iae.service.ConfigurationService;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
+import javafx.application.Platform;
 
 import java.sql.SQLException;
 import java.time.LocalDateTime;
