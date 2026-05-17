@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.iae.ui.controller.ConfigurationEditorController"
+      spacing="8"
+      prefWidth="500"
+      style="-fx-background-color: #FAFAFA;">
+
+    <padding>
+        <Insets top="20" right="24" bottom="20" left="24"/>
+    </padding>
+
+    <!-- Title -->
+    <Label text="Configuration Details"
+           style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #1A237E;"/>
+
+    <Separator/>
+
+    <!-- Name -->
+    <Label text="Configuration Name *"/>
+    <TextField fx:id="nameField"
+               promptText="e.g. C Programming Language"/>
+
+    <!-- Requires Compilation toggle -->
+    <CheckBox fx:id="requiresCompilationCheckBox"
+              text="Requires Compilation (disable for interpreted languages like Python)"
+              onAction="#handleCompilationToggle"/>
+
+    <Separator/>
+
+    <!-- Compiler section -->
+    <Label text="Compiler Settings"
+           style="-fx-font-weight: bold; -fx-text-fill: #424242;"/>
+
+    <Label text="Compiler Path *"/>
+    <HBox spacing="6" alignment="CENTER_LEFT">
+        <TextField fx:id="compilerPathField"
+                   promptText="e.g. gcc  or  C:\MinGW\bin\gcc.exe"
+                   HBox.hgrow="ALWAYS"/>
+        <Button fx:id="testCompilerButton"
+                text="Test"
+                onAction="#handleTestCompiler"
+                style="-fx-background-color: #455A64; -fx-text-fill: white;"/>
+    </HBox>
+
+    <Label text="Compiler Arguments *  (must include {source})"/>
+    <TextField fx:id="compilerArgsField"
+               promptText="e.g. {source} -o {output}"/>
+
+    <Separator/>
+
+    <!-- Run section -->
+    <Label text="Run Settings"
+           style="-fx-font-weight: bold; -fx-text-fill: #424242;"/>
+
+    <Label text="Run Command *  ({executable}, {args}, {source} are available)"/>
+    <TextField fx:id="runCommandField"
+               promptText="e.g. ./{executable} {args}  or  python {source} {args}"/>
+
+    <Separator/>
+
+    <!-- File settings -->
+    <Label text="File Settings"
+           style="-fx-font-weight: bold; -fx-text-fill: #424242;"/>
+
+    <GridPane hgap="12" vgap="6">
+        <columnConstraints>
+            <ColumnConstraints hgrow="ALWAYS"/>
+            <ColumnConstraints hgrow="ALWAYS"/>
+            <ColumnConstraints hgrow="SOMETIMES" prefWidth="90"/>
+        </columnConstraints>
+
+        <Label text="Source File Name *" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+        <Label text="Output File Name"   GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+        <Label text="File Extension *"   GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+
+        <TextField fx:id="sourceFileNameField"
+                   promptText="e.g. main.c"
+                   GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+        <TextField fx:id="outputFileNameField"
+                   promptText="e.g. main"
+                   GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+        <TextField fx:id="fileExtensionField"
+                   promptText=".c"
+                   GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+    </GridPane>
+
+    <!-- Description -->
+    <Label text="Description"/>
+    <TextArea fx:id="descriptionArea"
+              prefRowCount="3"
+              promptText="Optional description of this configuration..."
+              wrapText="true"/>
+
+    <!-- Status label -->
+    <Label fx:id="statusLabel"
+           text=""
+           wrapText="true"
+           style="-fx-text-fill: #D32F2F;"/>
+
+    <!-- Buttons -->
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <padding>
+            <Insets top="8"/>
+        </padding>
+        <Button fx:id="cancelButton"
+                text="Cancel"
+                onAction="#handleCancel"
+                prefWidth="90"/>
+        <Button fx:id="saveButton"
+                text="Save"
+                onAction="#handleSave"
+                prefWidth="90"
+                style="-fx-background-color: #1565C0; -fx-text-fill: white; -fx-font-weight: bold;"/>
+    </HBox>
+</VBox>
