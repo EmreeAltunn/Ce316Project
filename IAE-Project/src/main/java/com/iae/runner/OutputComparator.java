@@ -18,6 +18,12 @@ public class OutputComparator {
         String actual = normalize(actualOutput);
         String expected = normalize(expectedOutput);
 
+        if (actual.equals(expected)) {
+            result.setMatch(true);
+            result.setDifferences(differences);
+            return result;
+        }
+
         String[] actualLines = splitLines(actual);
         String[] expectedLines = splitLines(expected);
 
@@ -32,12 +38,24 @@ public class OutputComparator {
             String actualLine = actualLines[i];
 
             if (!expectedLine.equals(actualLine)) {
-                differences.add("Line " + (i + 1) + ": expected '" + expectedLine + "' got '" + actualLine + "'");
+                differences.add(
+                        "Line " + (i + 1)
+                                + " differs: expected \"" + visible(expectedLine)
+                                + "\", got \"" + visible(actualLine) + "\""
+                );
             }
         }
 
+        for (int i = commonLineCount; i < expectedLines.length; i++) {
+            differences.add("Missing line " + (i + 1) + ": expected \"" + visible(expectedLines[i]) + "\"");
+        }
+
+        for (int i = commonLineCount; i < actualLines.length; i++) {
+            differences.add("Extra line " + (i + 1) + ": got \"" + visible(actualLines[i]) + "\"");
+        }
+
         result.setDifferences(differences);
-        result.setMatch(differences.isEmpty());
+        result.setMatch(false);
 
         return result;
     }
@@ -64,5 +82,15 @@ public class OutputComparator {
         }
 
         return text.split("\n");
+    }
+
+    private String visible(String text) {
+        if (text == null) {
+            return "";
+        }
+
+        return text
+                .replace("\t", "\\t")
+                .replace("\n", "\\n");
     }
 }
