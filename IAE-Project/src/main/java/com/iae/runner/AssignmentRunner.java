@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Stream;
 
 public class AssignmentRunner {
@@ -529,7 +530,8 @@ public class AssignmentRunner {
         }
 
         File[] zipFiles = submissionsDir.listFiles(
-                (dir, name) -> name.toLowerCase().endsWith(".zip")
+                (dir, name) -> new File(dir, name).isFile()
+                        && name.toLowerCase(Locale.ROOT).endsWith(".zip")
         );
 
         if (zipFiles == null) {

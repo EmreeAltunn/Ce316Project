@@ -3,6 +3,7 @@ package com.iae.process;
 import com.iae.model.ProcessResult;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -90,10 +91,12 @@ public class ProcessExecutor {
     }
 
     private void readStream(InputStream is, StringBuilder buffer) {
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                buffer.append(line).append("\n");
+        try (Reader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
+            char[] chunk = new char[1024];
+            int read;
+
+            while ((read = reader.read(chunk)) != -1) {
+                buffer.append(chunk, 0, read);
             }
         } catch (IOException ignored) {}
     }

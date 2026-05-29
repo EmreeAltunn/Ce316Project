@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -25,7 +26,9 @@ public class ZipProcessor {
             );
         }
 
-        File[] zipFiles = zipDirectory.listFiles((dir, name) -> name.toLowerCase().endsWith(".zip"));
+        File[] zipFiles = zipDirectory.listFiles((dir, name) ->
+                new File(dir, name).isFile()
+                        && name.toLowerCase(Locale.ROOT).endsWith(".zip"));
 
         if (zipFiles == null || zipFiles.length == 0) {
             System.out.println("Warning: no .zip files found in " + zipDirectory.getAbsolutePath());
@@ -91,7 +94,7 @@ public class ZipProcessor {
 
     public String getStudentIdFromZip(File zipFile) {
         String name = zipFile.getName();
-        if (name.toLowerCase().endsWith(".zip")) {
+        if (name.toLowerCase(Locale.ROOT).endsWith(".zip")) {
             name = name.substring(0, name.length() - 4);
         }
         return name;
