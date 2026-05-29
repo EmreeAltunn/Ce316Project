@@ -109,6 +109,25 @@ public class ProjectController {
         }
     }
 
+    public void refreshConfigurations() {
+        int selectedId = 0;
+        Configuration selected = configurationComboBox.getValue();
+
+        if (selected != null) {
+            selectedId = selected.getId();
+        } else if (project != null) {
+            selectedId = project.getConfigurationId();
+        }
+
+        loadConfigurations();
+
+        if (selectedId > 0) {
+            selectConfiguration(selectedId);
+        } else {
+            configurationComboBox.setValue(null);
+        }
+    }
+
     // ─── FXML handlers ───────────────────────────────────────────────────────
 
     @FXML
@@ -238,13 +257,19 @@ public class ProjectController {
         }
     }
 
-    private void selectConfiguration(int configurationId) {
+    private boolean selectConfiguration(int configurationId) {
         for (Configuration c : configurationComboBox.getItems()) {
             if (c.getId() == configurationId) {
                 configurationComboBox.setValue(c);
-                return;
+                return true;
             }
         }
+
+        if (configurationId > 0) {
+            configurationComboBox.setValue(null);
+        }
+
+        return false;
     }
 
     private File chooseDirectory(String title) {
