@@ -33,6 +33,7 @@ public class AssignmentRunner {
     private final ProcessExecutor processExecutor;
     private final OutputComparator outputComparator;
     private final ProjectService projectService;
+    private volatile boolean cancelRequested;
 
     public AssignmentRunner(ZipProcessor zipProcessor,
                             ProcessExecutor processExecutor,
@@ -49,6 +50,8 @@ public class AssignmentRunner {
                          List<TestCase> testCases,
                          RunnerCallback callback) {
 
+        cancelRequested = false;
+
         Thread runnerThread = new Thread(() -> {
             List<StudentResult> results = new ArrayList<>();
 
@@ -58,6 +61,10 @@ public class AssignmentRunner {
                 int total = zipFiles.length;
 
                 for (int i = 0; i < zipFiles.length; i++) {
+                    if (cancelRequested) {
+                        break;
+                    }
+
                     File zipFile = zipFiles[i];
                     String studentId = zipProcessor.getStudentIdFromZip(zipFile);
                     int current = i + 1;
@@ -66,9 +73,12 @@ public class AssignmentRunner {
 
                     try {
                         StudentResult result = processStudent(zipFile, config, testCases, project);
-                        saveStudentResult(result);
+                        String saveError = trySaveStudentResult(result);
                         results.add(result);
 
+                        if (saveError != null) {
+                            runOnUiThread(() -> callback.onStudentError(studentId, saveError));
+                        }
                         runOnUiThread(() -> callback.onStudentCompleted(result));
                     } catch (Exception e) {
                         StudentResult errorResult = createErrorResult(
@@ -78,10 +88,13 @@ public class AssignmentRunner {
                                 e.getMessage()
                         );
 
-                        saveStudentResult(errorResult);
+                        String saveError = trySaveStudentResult(errorResult);
                         results.add(errorResult);
 
                         runOnUiThread(() -> callback.onStudentError(studentId, e.getMessage()));
+                        if (saveError != null) {
+                            runOnUiThread(() -> callback.onStudentError(studentId, saveError));
+                        }
                     }
 
                     runOnUiThread(() -> callback.onProgress(current, total));
@@ -99,15 +112,25 @@ public class AssignmentRunner {
         runnerThread.start();
     }
 
+    public void cancel() {
+        cancelRequested = true;
+    }
+
     public List<StudentResult> runSync(Project project,
                                        Configuration config,
                                        List<TestCase> testCases) throws Exception {
+
+        cancelRequested = false;
 
         List<StudentResult> results = new ArrayList<>();
         File submissionsDir = new File(project.getSubmissionsDirectory());
         File[] zipFiles = listZipFiles(submissionsDir);
 
         for (File zipFile : zipFiles) {
+            if (cancelRequested) {
+                break;
+            }
+
             String studentId = zipProcessor.getStudentIdFromZip(zipFile);
             StudentResult result;
 
@@ -117,7 +140,7 @@ public class AssignmentRunner {
                 result = createErrorResult(project, zipFile, studentId, e.getMessage());
             }
 
-            saveStudentResult(result);
+            trySaveStudentResult(result);
             results.add(result);
         }
 
@@ -141,10 +164,17 @@ public class AssignmentRunner {
         result.setProcessedAt(LocalDateTime.now());
 
         try {
-            File studentDir = zipProcessor.extractSingle(
-                    zipFile,
-                    new File(project.getWorkingDirectory())
-            );
+            File studentDir;
+
+            try {
+                studentDir = zipProcessor.extractSingle(
+                        zipFile,
+                        new File(project.getWorkingDirectory())
+                );
+            } catch (Exception e) {
+                markExtractionError(result, e);
+                return result;
+            }
 
             File sourceFile = locateSourceFile(studentDir, config.getSourceFileName());
 
@@ -165,8 +195,7 @@ public class AssignmentRunner {
             }
 
             if (isCompileBlocking(result.getCompileStatus())) {
-                result.setRunStatus(ResultStatus.SKIPPED);
-                result.setTestStatus(ResultStatus.SKIPPED);
+                markCompileBlocked(result);
                 result.setProcessedAt(LocalDateTime.now());
                 return result;
             }
@@ -231,7 +260,7 @@ public class AssignmentRunner {
             result.setCompileError(processResult.getStderr());
 
             if (processResult.isTimedOut()) {
-                result.setCompileStatus(ResultStatus.FAILED);
+                result.setCompileStatus(ResultStatus.TIMEOUT);
                 result.setCompileError(
                         appendLine(result.getCompileError(), "Compilation timed out.")
                 );
@@ -239,16 +268,16 @@ public class AssignmentRunner {
                 result.setCompileStatus(
                         processResult.getExitCode() == 0
                                 ? ResultStatus.SUCCESS
-                                : ResultStatus.FAILED
+                                : ResultStatus.COMPILE_ERROR
                 );
 
-                if (result.getCompileStatus() == ResultStatus.FAILED
+                if (result.getCompileStatus() == ResultStatus.COMPILE_ERROR
                         && isBlank(result.getCompileError())) {
                     result.setCompileError("Compilation failed with exit code " + processResult.getExitCode() + ".");
                 }
             }
         } catch (Exception e) {
-            result.setCompileStatus(ResultStatus.FAILED);
+            result.setCompileStatus(ResultStatus.COMPILE_ERROR);
             result.setCompileError("Could not start compiler: " + e.getMessage());
         }
     }
@@ -268,7 +297,9 @@ public class AssignmentRunner {
 
         boolean anyRunFailed = false;
         boolean anyTestFailed = false;
+        boolean anyTestError = false;
         boolean atLeastOneCompared = false;
+        ResultStatus aggregateRunStatus = ResultStatus.SUCCESS;
 
         for (TestCase testCase : orderedTestCases) {
             SingleTestOutcome outcome = runSingleTestCase(testCase, config, executionDir, sourceFile);
@@ -293,10 +324,17 @@ public class AssignmentRunner {
 
             if (outcome.runStatus != ResultStatus.SUCCESS) {
                 anyRunFailed = true;
+                if (aggregateRunStatus == ResultStatus.SUCCESS
+                        || outcome.runStatus == ResultStatus.TIMEOUT) {
+                    aggregateRunStatus = outcome.runStatus;
+                }
             }
 
-            if (outcome.testStatus == ResultStatus.FAIL
-                    || outcome.testStatus == ResultStatus.ERROR) {
+            if (outcome.testStatus == ResultStatus.ERROR) {
+                anyTestError = true;
+            }
+
+            if (outcome.testStatus == ResultStatus.FAIL) {
                 anyTestFailed = true;
             }
 
@@ -322,9 +360,9 @@ public class AssignmentRunner {
         result.setProgramOutput(allProgramOutput.toString().trim());
         result.setErrorOutput(allErrorOutput.toString().trim());
 
-        result.setRunStatus(anyRunFailed ? ResultStatus.FAILED : ResultStatus.SUCCESS);
+        result.setRunStatus(anyRunFailed ? aggregateRunStatus : ResultStatus.SUCCESS);
 
-        if (anyRunFailed) {
+        if (anyRunFailed || anyTestError) {
             result.setTestStatus(ResultStatus.ERROR);
         } else if (!atLeastOneCompared) {
             result.setTestStatus(ResultStatus.SKIPPED);
@@ -346,7 +384,7 @@ public class AssignmentRunner {
 
         try {
             if (isBlank(config.getRunCommand())) {
-                outcome.runStatus = ResultStatus.FAILED;
+                outcome.runStatus = ResultStatus.RUNTIME_ERROR;
                 outcome.testStatus = ResultStatus.ERROR;
                 outcome.details = "Run command is empty.";
                 return outcome;
@@ -366,7 +404,7 @@ public class AssignmentRunner {
             List<String> commandParts = splitCommand(command);
 
             if (commandParts.isEmpty()) {
-                outcome.runStatus = ResultStatus.FAILED;
+                outcome.runStatus = ResultStatus.RUNTIME_ERROR;
                 outcome.testStatus = ResultStatus.ERROR;
                 outcome.details = "Run command is empty after applying arguments.";
                 return outcome;
@@ -382,26 +420,43 @@ public class AssignmentRunner {
             outcome.exitCode = processResult.getExitCode();
 
             if (processResult.isTimedOut()) {
-                outcome.runStatus = ResultStatus.FAILED;
+                outcome.runStatus = ResultStatus.TIMEOUT;
                 outcome.testStatus = ResultStatus.ERROR;
-                outcome.details = withExitCode("Execution timed out.", processResult.getExitCode());
+                outcome.details = appendCapturedOutput(
+                        withExitCode("Execution timed out.", processResult.getExitCode()),
+                        outcome.stdout,
+                        outcome.stderr
+                );
                 return outcome;
             }
 
             outcome.runStatus = processResult.getExitCode() == 0
                     ? ResultStatus.SUCCESS
-                    : ResultStatus.FAILED;
+                    : ResultStatus.RUNTIME_ERROR;
 
-            if (outcome.runStatus == ResultStatus.FAILED) {
+            if (outcome.runStatus == ResultStatus.RUNTIME_ERROR) {
                 outcome.testStatus = ResultStatus.ERROR;
-                outcome.details = withExitCode(
-                        "Program exited with code " + processResult.getExitCode() + ".",
-                        processResult.getExitCode()
+                outcome.details = appendCapturedOutput(
+                        withExitCode(
+                                "Program exited with code " + processResult.getExitCode() + ".",
+                                processResult.getExitCode()
+                        ),
+                        outcome.stdout,
+                        outcome.stderr
                 );
                 return outcome;
             }
 
             if (!isBlank(testCase.getExpectedOutputFile())) {
+                if (processResult.getStdout() == null) {
+                    outcome.testStatus = ResultStatus.ERROR;
+                    outcome.details = withExitCode(
+                            "Program output was unavailable; comparison was not run.",
+                            processResult.getExitCode()
+                    );
+                    return outcome;
+                }
+
                 File expectedOutputFile = new File(testCase.getExpectedOutputFile());
 
                 if (!expectedOutputFile.exists() || !expectedOutputFile.isFile()) {
@@ -413,10 +468,21 @@ public class AssignmentRunner {
                     return outcome;
                 }
 
-                ComparisonResult comparisonResult = outputComparator.compareWithFile(
-                        processResult.getStdout(),
-                        expectedOutputFile
-                );
+                ComparisonResult comparisonResult;
+
+                try {
+                    comparisonResult = outputComparator.compareWithFile(
+                            processResult.getStdout(),
+                            expectedOutputFile
+                    );
+                } catch (IOException e) {
+                    outcome.testStatus = ResultStatus.ERROR;
+                    outcome.details = withExitCode(
+                            "Could not read expected output file: " + e.getMessage(),
+                            processResult.getExitCode()
+                    );
+                    return outcome;
+                }
 
                 outcome.testStatus = comparisonResult.isMatch()
                         ? ResultStatus.PASS
@@ -435,10 +501,10 @@ public class AssignmentRunner {
                 );
             }
         } catch (Exception e) {
-            outcome.runStatus = ResultStatus.FAILED;
+            outcome.runStatus = ResultStatus.RUNTIME_ERROR;
             outcome.testStatus = ResultStatus.ERROR;
             outcome.stderr = appendLine(outcome.stderr, e.getMessage());
-            outcome.details = e.getMessage();
+            outcome.details = "Could not run program: " + e.getMessage();
         }
 
         return outcome;
@@ -482,19 +548,37 @@ public class AssignmentRunner {
                 + " under "
                 + studentDir.getAbsolutePath();
 
-        if (shouldCompile(config)) {
-            result.setCompileStatus(ResultStatus.FAILED);
-            result.setCompileError(message);
-        } else {
-            result.setCompileStatus(ResultStatus.SKIPPED);
-            result.setCompileOutput(getCompileSkipMessage(config));
-        }
-
+        result.setCompileStatus(ResultStatus.MISSING_SOURCE);
+        result.setCompileError(message);
         result.setRunStatus(ResultStatus.SKIPPED);
         result.setErrorOutput(message);
         result.setTestStatus(ResultStatus.ERROR);
         result.setTestDetails(message);
         result.setProcessedAt(LocalDateTime.now());
+    }
+
+    private void markExtractionError(StudentResult result, Exception exception) {
+        String message = "ZIP extraction failed: " + safeMessage(exception);
+
+        result.setCompileStatus(ResultStatus.EXTRACTION_ERROR);
+        result.setCompileError(message);
+        result.setRunStatus(ResultStatus.SKIPPED);
+        result.setErrorOutput(message);
+        result.setTestStatus(ResultStatus.ERROR);
+        result.setTestDetails(message);
+        result.setProcessedAt(LocalDateTime.now());
+    }
+
+    private void markCompileBlocked(StudentResult result) {
+        result.setRunStatus(ResultStatus.SKIPPED);
+        result.setTestStatus(ResultStatus.ERROR);
+
+        String detail = firstNonBlank(
+                result.getCompileError(),
+                result.getCompileOutput(),
+                "Compilation did not complete successfully."
+        );
+        result.setTestDetails(detail);
     }
 
     private boolean shouldCompile(Configuration config) {
@@ -564,6 +648,17 @@ public class AssignmentRunner {
         StudentResultService studentResultService = new StudentResultService(dbManager);
 
         studentResultService.save(result);
+    }
+
+    private String trySaveStudentResult(StudentResult result) {
+        try {
+            saveStudentResult(result);
+            return null;
+        } catch (Exception e) {
+            String message = "Could not save result: " + safeMessage(e);
+            result.setTestDetails(appendLine(result.getTestDetails(), message));
+            return message;
+        }
     }
 
     private StudentResult createErrorResult(Project project,
@@ -713,8 +808,44 @@ public class AssignmentRunner {
         return appendLine("Exit code: " + exitCode, details);
     }
 
+    private String appendCapturedOutput(String details, String stdout, String stderr) {
+        String updated = details;
+
+        if (!isBlank(stderr)) {
+            updated = appendLine(updated, "stderr:");
+            updated = appendLine(updated, stderr.trim());
+        }
+
+        if (!isBlank(stdout)) {
+            updated = appendLine(updated, "stdout:");
+            updated = appendLine(updated, stdout.trim());
+        }
+
+        return updated;
+    }
+
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (!isBlank(value)) {
+                return value;
+            }
+        }
+
+        return "";
+    }
+
+    private String safeMessage(Exception exception) {
+        if (exception == null) {
+            return "Unknown error.";
+        }
+
+        return isBlank(exception.getMessage())
+                ? exception.getClass().getSimpleName()
+                : exception.getMessage();
     }
 
     private String appendLine(String current, String line) {

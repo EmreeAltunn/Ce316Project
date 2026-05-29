@@ -34,6 +34,7 @@ public class RunnerController implements RunnerCallback {
     @FXML private Button viewResultsButton;
 
     private MainController mainController;
+    private AssignmentRunner currentRunner;
     private final List<StudentResult> results = new ArrayList<>();
 
     /** MainController.showRunnerView() tarafindan cagrilir. */
@@ -43,7 +44,7 @@ public class RunnerController implements RunnerCallback {
                          MainController mainController) {
         this.mainController = mainController;
 
-        AssignmentRunner runner = new AssignmentRunner(
+        currentRunner = new AssignmentRunner(
                 new ZipProcessor(),
                 new ProcessExecutor(),
                 new OutputComparator(),
@@ -54,7 +55,7 @@ public class RunnerController implements RunnerCallback {
         log("Submissions: " + project.getSubmissionsDirectory());
         log("─────────────────────────────────────────");
 
-        runner.runAsync(project, config, testCases, this);
+        currentRunner.runAsync(project, config, testCases, this);
     }
 
     // ─── RunnerCallback ──────────────────────────────────────────────────────
@@ -85,6 +86,7 @@ public class RunnerController implements RunnerCallback {
             log("Done. " + finalResults.size() + " student(s) processed.");
             cancelButton.setDisable(true);
             viewResultsButton.setDisable(false);
+            currentRunner = null;
         });
     }
 
@@ -101,6 +103,10 @@ public class RunnerController implements RunnerCallback {
 
     @FXML
     private void handleCancel() {
+        if (currentRunner != null) {
+            currentRunner.cancel();
+        }
+
         cancelButton.setDisable(true);
         log("Cancellation requested — the run will stop after the current student.");
     }
