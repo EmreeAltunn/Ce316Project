@@ -137,6 +137,7 @@ public class MainController {
             dialog.initModality(Modality.APPLICATION_MODAL);
             dialog.initOwner(getStage());
             dialog.showAndWait();
+            refreshActiveProjectConfigurations();
         } catch (IOException e) {
             e.printStackTrace();
             showError("Cannot open Configurations", e.getMessage());
@@ -232,6 +233,12 @@ public class MainController {
 
     private void setContent(Parent root) {
         contentArea.getChildren().setAll(root);
+    }
+
+    private void refreshActiveProjectConfigurations() {
+        if (activeProjectController != null) {
+            activeProjectController.refreshConfigurations();
+        }
     }
 
     StudentResultService getStudentResultService() {

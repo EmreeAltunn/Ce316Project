@@ -7,5 +7,10 @@ public enum ResultStatus {
     SKIPPED,
     PASS,
     FAIL,
-    ERROR
+    ERROR,
+    EXTRACTION_ERROR,
+    MISSING_SOURCE,
+    COMPILE_ERROR,
+    RUNTIME_ERROR,
+    TIMEOUT
 }
