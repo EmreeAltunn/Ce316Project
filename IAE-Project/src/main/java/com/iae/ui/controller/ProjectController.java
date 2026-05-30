@@ -3,6 +3,7 @@ package com.iae.ui.controller;
 import com.iae.model.Configuration;
 import com.iae.model.Project;
 import com.iae.model.TestCase;
+import com.iae.model.StudentResult;
 import com.iae.service.ConfigurationService;
 import com.iae.service.ProjectService;
 import com.iae.service.TestCaseService;
@@ -44,6 +45,7 @@ public class ProjectController {
     @FXML private Button removeTestCaseButton;
     @FXML private Button saveButton;
     @FXML private Button runButton;
+    @FXML private Button viewResultsButton;
     @FXML private Label statusLabel;
 
     // ─── State ──────────────────────────────────────────────────────────────
@@ -106,6 +108,9 @@ public class ProjectController {
             } catch (SQLException e) {
                 showError("Could not load test cases: " + e.getMessage());
             }
+            viewResultsButton.setDisable(false);
+        } else {
+            viewResultsButton.setDisable(true);
         }
     }
 
@@ -173,6 +178,24 @@ public class ProjectController {
         mainController.showRunnerView(project, config, List.copyOf(testCases));
     }
 
+    @FXML
+    private void handleViewSavedResults() {
+        if (project == null || project.getId() <= 0) {
+            showError("Please save or open a project first.");
+            return;
+        }
+        try {
+            List<StudentResult> results = mainController.getStudentResultService().findByProjectId(project.getId());
+            if (results.isEmpty()) {
+                showInfo("No saved results exist for this project yet. Run the assignment first.");
+            } else {
+                mainController.showResultsView(results);
+            }
+        } catch (SQLException e) {
+            showError("Could not retrieve saved results: " + e.getMessage());
+        }
+    }
+
     // ─── Persistence ─────────────────────────────────────────────────────────
 
     /**
@@ -207,6 +230,7 @@ public class ProjectController {
                 project = projectService.save(project);
             }
             persistTestCases();
+            viewResultsButton.setDisable(false);
             showInfo("Project saved (#" + project.getId() + ").");
             return true;
         } catch (SQLException e) {

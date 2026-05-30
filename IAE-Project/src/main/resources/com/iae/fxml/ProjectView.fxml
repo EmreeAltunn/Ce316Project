@@ -70,6 +70,8 @@
                     style="-fx-background-color: #1565C0; -fx-text-fill: white;"/>
             <Button fx:id="runButton" text="Run Assignment" onAction="#handleRun"
                     style="-fx-background-color: #2E7D32; -fx-text-fill: white;"/>
+            <Button fx:id="viewResultsButton" text="View Saved Results" onAction="#handleViewSavedResults"
+                    style="-fx-background-color: #5C6BC0; -fx-text-fill: white;"/>
             <Region HBox.hgrow="ALWAYS"/>
         </HBox>
 

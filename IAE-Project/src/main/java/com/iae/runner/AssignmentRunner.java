@@ -52,6 +52,15 @@ public class AssignmentRunner {
             List<StudentResult> results = new ArrayList<>();
 
             try {
+                if (project.getId() > 0) {
+                    try {
+                        StudentResultService srs = getStudentResultService();
+                        srs.deleteByProjectId(project.getId());
+                    } catch (Exception e) {
+                        throw new Exception("Could not clear previous run results: " + e.getMessage());
+                    }
+                }
+
                 File submissionsDir = new File(project.getSubmissionsDirectory());
                 File[] zipFiles = listZipFiles(submissionsDir);
                 int total = zipFiles.length;
@@ -103,6 +112,14 @@ public class AssignmentRunner {
                                        List<TestCase> testCases) throws Exception {
 
         List<StudentResult> results = new ArrayList<>();
+        if (project.getId() > 0) {
+            try {
+                StudentResultService srs = getStudentResultService();
+                srs.deleteByProjectId(project.getId());
+            } catch (Exception e) {
+                throw new Exception("Could not clear previous run results: " + e.getMessage());
+            }
+        }
         File submissionsDir = new File(project.getSubmissionsDirectory());
         File[] zipFiles = listZipFiles(submissionsDir);
 
@@ -705,6 +722,15 @@ public class AssignmentRunner {
 
     private String valueOrEmpty(String value) {
         return value == null ? "" : value;
+    }
+
+    private StudentResultService getStudentResultService() throws Exception {
+        Field dbManagerField = projectService
+                .getClass()
+                .getDeclaredField("dbManager");
+        dbManagerField.setAccessible(true);
+        DatabaseManager dbManager = (DatabaseManager) dbManagerField.get(projectService);
+        return new StudentResultService(dbManager);
     }
 
     private String withExitCode(String details, int exitCode) {
