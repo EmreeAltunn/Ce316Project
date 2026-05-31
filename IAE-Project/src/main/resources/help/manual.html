@@ -21,8 +21,8 @@
 <body>
 
 <h1>IAE — Integrated Assignment Environment</h1>
-<p>IAE, programlama odevlerini otomatik olarak derleyip calistirip beklenen
-ciktiyla karsilastiran bir masaustu uygulamasidir.</p>
+<p>IAE is a desktop application that automatically compiles and runs programming
+assignments and compares their output against the expected output.</p>
 
 <nav>
 <strong>Contents:</strong>
@@ -37,67 +37,65 @@ ciktiyla karsilastiran bir masaustu uygulamasidir.</p>
 </nav>
 
 <h2 id="start">Getting Started</h2>
-<p>Uygulamayi baslattiginizda ana pencere acilir. Tum veriler kullanici
-ev dizininizdeki <code>.iae</code> klasorunde bir SQLite veritabaninda saklanir.
-Tipik akis: once bir <em>Configuration</em> tanimlayin, sonra bir <em>Project</em>
-olusturun, test case ekleyin ve odevi calistirin.</p>
+<p>When you launch the application, the main window opens. All data is stored in a
+SQLite database inside the <code>.iae</code> folder in your user home directory.
+The typical workflow is: first define a <em>Configuration</em>, then create a
+<em>Project</em>, add test cases, and run the assignment.</p>
 
 <h2 id="config">Creating a Configuration</h2>
-<p><strong>Configuration &gt; Manage Configurations</strong> menusunu acin ve
-<strong>New</strong> butonuna basin. Bir konfigurasyon kullanilan programlama
-dilini tanimlar:</p>
+<p>Open the <strong>Configuration &gt; Manage Configurations</strong> menu and click
+<strong>New</strong>. A configuration defines the programming language being used:</p>
 <table>
 <tr><th>Field</th><th>Description</th></tr>
-<tr><td>Name</td><td>Konfigurasyon adi (benzersiz)</td></tr>
-<tr><td>Compiler Path</td><td>Derleyici yolu, orn. <code>gcc</code> (yorumlanan dillerde bos)</td></tr>
-<tr><td>Compiler Args</td><td>Derleme argumanlari, <code>{source}</code> ve <code>{output}</code> kullanir</td></tr>
-<tr><td>Run Command</td><td>Calistirma komutu, <code>{executable}</code> ve <code>{args}</code> kullanir</td></tr>
-<tr><td>Requires Compilation</td><td>C/Java icin isaretli, Python gibi dillerde isaretsiz</td></tr>
-<tr><td>Source / Output File</td><td>Kaynak dosya adi ve derlenmis cikti adi</td></tr>
+<tr><td>Name</td><td>Configuration name (unique)</td></tr>
+<tr><td>Compiler Path</td><td>Path to the compiler, e.g. <code>gcc</code> (leave empty for interpreted languages)</td></tr>
+<tr><td>Compiler Args</td><td>Compilation arguments; uses <code>{source}</code> and <code>{output}</code></td></tr>
+<tr><td>Run Command</td><td>Run command; uses <code>{executable}</code> and <code>{args}</code></td></tr>
+<tr><td>Requires Compilation</td><td>Checked for C/Java; unchecked for languages like Python</td></tr>
+<tr><td>Source / Output File</td><td>Source file name and compiled output name</td></tr>
 </table>
-<div class="tip">Placeholder'lar: <code>{source}</code>, <code>{output}</code>,
-<code>{executable}</code>, <code>{args}</code> calisma sirasinda otomatik doldurulur.</div>
+<div class="tip">Placeholders <code>{source}</code>, <code>{output}</code>,
+<code>{executable}</code> and <code>{args}</code> are filled in automatically at run time.</div>
 
 <h2 id="impexp">Importing / Exporting Configurations</h2>
-<p>Manage Configurations ekraninda <strong>Import…</strong> ile bir
-<code>.iaeconfig</code> dosyasini iceri aktarabilir, <strong>Export Selected…</strong>
-veya <strong>Export All…</strong> ile konfigurasyonlari disa aktarabilirsiniz.
-Bu, konfigurasyonlari ekip arkadaslariyla paylasmayi kolaylastirir.</p>
+<p>On the Manage Configurations screen you can import a <code>.iaeconfig</code> file with
+<strong>Import…</strong>, and export configurations with <strong>Export Selected…</strong>
+or <strong>Export All…</strong>. This makes it easy to share configurations with your
+teammates.</p>
 
 <h2 id="project">Creating a Project</h2>
-<p><strong>File &gt; New Project</strong> menusunu secin. Proje adini girin,
-bir konfigurasyon secin ve iki dizini belirleyin:</p>
+<p>Select <strong>File &gt; New Project</strong>. Enter the project name, choose a
+configuration, and set two directories:</p>
 <ul>
-<li><strong>Submissions Directory</strong> — ogrenci ZIP dosyalarinin bulundugu klasor</li>
-<li><strong>Working Directory</strong> — ZIP'lerin acilacagi calisma klasoru</li>
+<li><strong>Submissions Directory</strong> — the folder containing the student ZIP files</li>
+<li><strong>Working Directory</strong> — the working folder where the ZIPs will be extracted</li>
 </ul>
-<p><strong>Save Project</strong> ile projeyi kaydedin. Daha sonra
-<strong>File &gt; Open Project</strong> ile geri yukleyebilirsiniz.</p>
+<p>Save the project with <strong>Save Project</strong>. You can reload it later with
+<strong>File &gt; Open Project</strong>.</p>
 
 <h2 id="tests">Adding Test Cases</h2>
-<p>Proje formunda <strong>Add Test Case</strong> butonuna basin. Her test case
-icin bir ad, opsiyonel girdi argumanlari ve opsiyonel bir beklenen cikti dosyasi
-belirtebilirsiniz. Bir test case'i kaldirmak icin tablodan secip
-<strong>Remove Test Case</strong> kullanin.</p>
+<p>On the project form, click <strong>Add Test Case</strong>. For each test case you can
+specify a name, optional input arguments, and an optional expected-output file. To remove
+a test case, select it in the table and use <strong>Remove Test Case</strong>.</p>
 
 <h2 id="run">Running an Assignment</h2>
-<p>Proje formunda <strong>Run Assignment</strong> butonuna basin. IAE tum ZIP
-dosyalarini acar, her ogrenci icin kaynak kodu derler (gerekiyorsa), calistirir
-ve ciktiyi beklenen ciktiyla karsilastirir. Ilerleme cubugu ve canli log
-calisma sirasinda guncellenir.</p>
+<p>On the project form, click <strong>Run Assignment</strong>. IAE extracts all the ZIP
+files, compiles the source code for each student (if required), runs it, and compares the
+output against the expected output. The progress bar and live log are updated during the
+run.</p>
 
 <h2 id="results">Viewing Results</h2>
-<p>Calisma bitince <strong>View Results</strong> butonu etkinlesir. Sonuc
-tablosu her ogrenci icin derleme, calistirma ve test durumunu gosterir.
-<strong>Export CSV…</strong> ile sonuclari bir CSV dosyasina aktarabilirsiniz.</p>
+<p>When the run finishes, the <strong>View Results</strong> button becomes enabled. The
+results table shows the compile, run, and test status for each student. You can export the
+results to a CSV file with <strong>Export CSV…</strong>.</p>
 
 <h2 id="trouble">Troubleshooting</h2>
 <table>
 <tr><th>Problem</th><th>Solution</th></tr>
-<tr><td>Derleyici bulunamadi</td><td>Configuration ekraninda <strong>Test Compiler</strong> ile yolu dogrulayin</td></tr>
-<tr><td>ZIP acilmiyor</td><td>Dosyanin gecerli bir ZIP oldugundan ve bozuk olmadigindan emin olun</td></tr>
-<tr><td>Tum testler FAIL</td><td>Beklenen cikti dosyasi yolunu ve run komutunu kontrol edin</td></tr>
-<tr><td>Program takiliyor</td><td>Calisma 30 saniye sonra otomatik olarak zaman asimina ugrar</td></tr>
+<tr><td>Compiler not found</td><td>Verify the path with <strong>Test Compiler</strong> on the Configuration screen</td></tr>
+<tr><td>ZIP does not extract</td><td>Make sure the file is a valid, uncorrupted ZIP</td></tr>
+<tr><td>All tests FAIL</td><td>Check the expected-output file path and the run command</td></tr>
+<tr><td>Program hangs</td><td>The run automatically times out after 30 seconds</td></tr>
 </table>
 
 <hr>
