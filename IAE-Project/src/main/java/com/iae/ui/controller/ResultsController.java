@@ -33,6 +33,12 @@ public class ResultsController {
 
     private final ObservableList<StudentResult> items = FXCollections.observableArrayList();
 
+    private MainController mainController;
+
+    public void setMainController(MainController mainController) {
+        this.mainController = mainController;
+    }
+
     @FXML
     public void initialize() {
         studentIdColumn.setCellValueFactory(
@@ -61,6 +67,11 @@ public class ResultsController {
         }
         summaryLabel.setText(results.size() + " student(s) | "
                 + pass + " PASS | " + fail + " FAIL | " + error + " ERROR");
+    }
+
+    @FXML
+    private void handleBack() {
+        mainController.showWelcome();
     }
 
     @FXML

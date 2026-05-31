@@ -46,6 +46,7 @@ public class ProjectController {
     @FXML private Button saveButton;
     @FXML private Button runButton;
     @FXML private Button viewResultsButton;
+    @FXML private Button deleteButton;
     @FXML private Label statusLabel;
 
     // ─── State ──────────────────────────────────────────────────────────────
@@ -212,6 +213,36 @@ public class ProjectController {
             }
         } catch (SQLException e) {
             showError("Could not retrieve saved results: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleDelete() {
+        if (project == null || project.getId() <= 0) {
+            showError("Save or open a project first; nothing to delete.");
+            return;
+        }
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Delete Project");
+        confirm.setHeaderText(null);
+        confirm.setContentText("Delete project \"" + nullSafe(project.getName())
+                + "\" and all its test cases and saved results? This cannot be undone.");
+        Optional<ButtonType> choice = confirm.showAndWait();
+        if (choice.isEmpty() || choice.get() != ButtonType.OK) {
+            return;
+        }
+
+        try {
+            // FK kisitlari ON DELETE CASCADE icermez — once cocuk kayitlar silinmeli.
+            mainController.getStudentResultService().deleteByProjectId(project.getId());
+            for (TestCase existing : testCaseService.findByProjectId(project.getId())) {
+                testCaseService.delete(existing.getId());
+            }
+            projectService.delete(project.getId());
+            mainController.showWelcome();
+        } catch (SQLException e) {
+            showError("Delete failed: " + e.getMessage());
         }
     }
 

@@ -37,6 +37,7 @@
     </TableView>
 
     <HBox spacing="8">
+        <Button fx:id="backButton" text="Back to Main" onAction="#handleBack"/>
         <Button fx:id="exportCsvButton" text="Export CSV…" onAction="#handleExportCsv"
                 style="-fx-background-color: #1565C0; -fx-text-fill: white;"/>
         <Region HBox.hgrow="ALWAYS"/>

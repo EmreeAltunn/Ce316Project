@@ -68,6 +68,8 @@ public class MainController {
         projectService = new ProjectService(dbManager);
         testCaseService = new TestCaseService(dbManager);
         studentResultService = new StudentResultService(dbManager);
+
+        showWelcome();
     }
 
     // ─── File menu ───────────────────────────────────────────────────────────
@@ -79,6 +81,11 @@ public class MainController {
 
     @FXML
     private void handleOpenProject() {
+        openProjectChooser();
+    }
+
+    /** Kayitli projeleri listeler ve secileni acar. Welcome ekrani da cagirir. */
+    public void openProjectChooser() {
         try {
             List<Project> projects = projectService.findAll();
             if (projects.isEmpty()) {
@@ -123,6 +130,11 @@ public class MainController {
 
     @FXML
     private void handleManageConfigurations() {
+        manageConfigurations();
+    }
+
+    /** Configuration yonetim penceresini acar. Welcome ekrani da cagirir. */
+    public void manageConfigurations() {
         try {
             FXMLLoader loader = new FXMLLoader(
                     getClass().getResource("/com/iae/fxml/ConfigurationsManager.fxml"));
@@ -180,6 +192,22 @@ public class MainController {
 
     // ─── View switching (alt ekranlar tarafindan cagrilir) ───────────────────
 
+    /** Karsilama ekranini contentArea'ya yukler (acilis ekrani ve ana menu donusu). */
+    public void showWelcome() {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/com/iae/fxml/WelcomeView.fxml"));
+            Parent root = loader.load();
+            WelcomeController ctrl = loader.getController();
+            ctrl.setMainController(this);
+            setContent(root);
+            activeProjectController = null;
+        } catch (IOException e) {
+            e.printStackTrace();
+            showError("Cannot open Welcome view", e.getMessage());
+        }
+    }
+
     public void showProjectView(Project project) {
         openProjectView(project);
     }
@@ -205,6 +233,7 @@ public class MainController {
                     getClass().getResource("/com/iae/fxml/ResultsView.fxml"));
             Parent root = loader.load();
             ResultsController ctrl = loader.getController();
+            ctrl.setMainController(this);
             setContent(root);
             ctrl.setResults(results);
         } catch (IOException e) {

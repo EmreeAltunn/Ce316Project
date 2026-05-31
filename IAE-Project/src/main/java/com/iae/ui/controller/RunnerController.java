@@ -32,6 +32,7 @@ public class RunnerController implements RunnerCallback {
     @FXML private TextArea logTextArea;
     @FXML private Button cancelButton;
     @FXML private Button viewResultsButton;
+    @FXML private Button backButton;
 
     private MainController mainController;
     private AssignmentRunner currentRunner;
@@ -86,6 +87,7 @@ public class RunnerController implements RunnerCallback {
             log("Done. " + finalResults.size() + " student(s) processed.");
             cancelButton.setDisable(true);
             viewResultsButton.setDisable(false);
+            backButton.setDisable(false);
             currentRunner = null;
         });
     }
@@ -114,6 +116,11 @@ public class RunnerController implements RunnerCallback {
     @FXML
     private void handleViewResults() {
         mainController.showResultsView(new ArrayList<>(results));
+    }
+
+    @FXML
+    private void handleBack() {
+        mainController.showWelcome();
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
