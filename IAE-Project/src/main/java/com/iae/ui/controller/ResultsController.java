@@ -50,7 +50,7 @@ public class ResultsController {
         testStatusColumn.setCellValueFactory(
                 d -> new SimpleStringProperty(statusText(d.getValue().getTestStatus())));
         errorColumn.setCellValueFactory(
-                d -> new SimpleStringProperty(firstLine(detailText(d.getValue()))));
+                d -> new SimpleStringProperty(detailText(d.getValue())));
         resultsTable.setItems(items);
     }
 
@@ -90,13 +90,9 @@ public class ResultsController {
         if (file == null) return;
 
         try (PrintWriter writer = new PrintWriter(file, java.nio.charset.StandardCharsets.UTF_8)) {
-            writer.println("Student ID,Compile Status,Test Status,Error");
+            writer.println(csvHeader());
             for (StudentResult r : items) {
-                writer.println(String.join(",",
-                        csv(r.getStudentId()),
-                        csv(statusText(r.getCompileStatus())),
-                        csv(statusText(r.getTestStatus())),
-                        csv(firstLine(detailText(r)))));
+                writer.println(csvRow(r));
             }
             showInfo("Exported " + items.size() + " row(s) to " + file.getName());
         } catch (IOException e) {
@@ -106,24 +102,31 @@ public class ResultsController {
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
-    private static String detailText(StudentResult r) {
+    static String csvHeader() {
+        return "Student ID,Compile Status,Run Status,Test Status,Details";
+    }
+
+    static String csvRow(StudentResult r) {
+        return String.join(",",
+                csv(r.getStudentId()),
+                csv(statusText(r.getCompileStatus())),
+                csv(statusText(r.getRunStatus())),
+                csv(statusText(r.getTestStatus())),
+                csv(detailText(r)));
+    }
+
+    static String detailText(StudentResult r) {
+        if (r.getTestDetails() != null && !r.getTestDetails().isBlank()) {
+            return r.getTestDetails();
+        }
         if (r.getCompileError() != null && !r.getCompileError().isBlank()) {
             return r.getCompileError();
         }
-        if (r.getErrorOutput() != null && !r.getErrorOutput().isBlank()) {
-            return r.getErrorOutput();
-        }
-        return nullSafe(r.getTestDetails());
+        return nullSafe(r.getErrorOutput());
     }
 
     private static String statusText(ResultStatus status) {
         return status != null ? status.name() : "";
-    }
-
-    private static String firstLine(String text) {
-        if (text == null || text.isEmpty()) return "";
-        int nl = text.indexOf('\n');
-        return nl >= 0 ? text.substring(0, nl) : text;
     }
 
     /** CSV alanini kacis karakterleriyle guvenli hale getirir. */

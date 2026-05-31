@@ -4,6 +4,7 @@ import com.iae.model.ProcessResult;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -43,7 +44,7 @@ public class ProcessExecutor {
 
         long startTime = System.currentTimeMillis();
 
-        ProcessBuilder builder = new ProcessBuilder(commandParts);
+        ProcessBuilder builder = new ProcessBuilder(resolveCommandParts(commandParts, workingDir));
         builder.directory(workingDir);
         builder.redirectErrorStream(false);
 
@@ -99,5 +100,19 @@ public class ProcessExecutor {
                 buffer.append(chunk, 0, read);
             }
         } catch (IOException ignored) {}
+    }
+
+    private List<String> resolveCommandParts(List<String> commandParts, File workingDir) {
+        List<String> resolved = new ArrayList<>(commandParts);
+        File executable = new File(resolved.get(0));
+
+        if (!executable.isAbsolute()) {
+            File workingExecutable = new File(workingDir, resolved.get(0));
+            if (workingExecutable.exists() && workingExecutable.isFile()) {
+                resolved.set(0, workingExecutable.getAbsolutePath());
+            }
+        }
+
+        return resolved;
     }
 }

@@ -15,16 +15,21 @@ import com.iae.service.StudentResultService;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Stream;
 
 public class AssignmentRunner {
@@ -225,7 +230,7 @@ public class AssignmentRunner {
                 return result;
             }
 
-            runTestCases(result, testCases, config, executionDir, sourceFile);
+            runTestCases(result, testCases, config, executionDir, sourceFile, studentDir);
         } catch (Exception e) {
             if (result.getCompileStatus() == ResultStatus.PENDING) {
                 result.setCompileStatus(ResultStatus.ERROR);
@@ -303,28 +308,52 @@ public class AssignmentRunner {
                               List<TestCase> testCases,
                               Configuration config,
                               File executionDir,
-                              File sourceFile) {
+                              File sourceFile,
+                              File studentDir) {
 
         List<TestCase> orderedTestCases = new ArrayList<>(testCases);
         orderedTestCases.sort(Comparator.comparingInt(TestCase::getOrderIndex));
 
         StringBuilder allProgramOutput = new StringBuilder();
         StringBuilder allErrorOutput = new StringBuilder();
-        StringBuilder details = new StringBuilder();
+        List<NamedTestOutcome> outcomes = new ArrayList<>();
 
         boolean anyRunFailed = false;
         boolean anyTestFailed = false;
         boolean anyTestError = false;
         boolean atLeastOneCompared = false;
         ResultStatus aggregateRunStatus = ResultStatus.SUCCESS;
+        File testRunsRoot;
 
-        for (TestCase testCase : orderedTestCases) {
-            SingleTestOutcome outcome = runSingleTestCase(testCase, config, executionDir, sourceFile);
+        try {
+            testRunsRoot = prepareTestRunsRoot(studentDir);
+        } catch (IOException e) {
+            result.setRunStatus(ResultStatus.RUNTIME_ERROR);
+            result.setTestStatus(ResultStatus.ERROR);
+            result.setTestDetails("Could not prepare isolated test directories: " + safeMessage(e));
+            result.setErrorOutput(safeMessage(e));
+            return;
+        }
+
+        for (int i = 0; i < orderedTestCases.size(); i++) {
+            TestCase testCase = orderedTestCases.get(i);
+            SingleTestOutcome outcome;
+
+            try {
+                File testExecutionDir = prepareTestExecutionDir(executionDir, testRunsRoot, testCase, i);
+                File testSourceFile = new File(testExecutionDir, sourceFile.getName());
+                outcome = runSingleTestCase(testCase, config, testExecutionDir, testSourceFile);
+            } catch (IOException e) {
+                outcome = createPreparationErrorOutcome(e);
+            }
+
+            String testName = displayTestName(testCase);
+            outcomes.add(new NamedTestOutcome(testName, outcome));
 
             if (!isBlank(outcome.stdout)) {
                 allProgramOutput
                         .append("--- ")
-                        .append(testCase.getName())
+                        .append(testName)
                         .append(" stdout ---\n")
                         .append(outcome.stdout)
                         .append('\n');
@@ -333,7 +362,7 @@ public class AssignmentRunner {
             if (!isBlank(outcome.stderr)) {
                 allErrorOutput
                         .append("--- ")
-                        .append(testCase.getName())
+                        .append(testName)
                         .append(" stderr ---\n")
                         .append(outcome.stderr)
                         .append('\n');
@@ -359,19 +388,6 @@ public class AssignmentRunner {
                     || outcome.testStatus == ResultStatus.FAIL) {
                 atLeastOneCompared = true;
             }
-
-            details
-                    .append(testCase.getName())
-                    .append(": ")
-                    .append(outcome.testStatus);
-
-            if (!isBlank(outcome.details)) {
-                details
-                        .append("\n")
-                        .append(outcome.details);
-            }
-
-            details.append("\n");
         }
 
         result.setProgramOutput(allProgramOutput.toString().trim());
@@ -389,7 +405,7 @@ public class AssignmentRunner {
             result.setTestStatus(ResultStatus.PASS);
         }
 
-        result.setTestDetails(details.toString().trim());
+        result.setTestDetails(formatAggregatedDetails(outcomes));
     }
 
     private SingleTestOutcome runSingleTestCase(TestCase testCase,
@@ -435,6 +451,7 @@ public class AssignmentRunner {
             outcome.stdout = processResult.getStdout();
             outcome.stderr = processResult.getStderr();
             outcome.exitCode = processResult.getExitCode();
+            outcome.hasExitCode = true;
 
             if (processResult.isTimedOut()) {
                 outcome.runStatus = ResultStatus.TIMEOUT;
@@ -478,26 +495,20 @@ public class AssignmentRunner {
 
                 if (!expectedOutputFile.exists() || !expectedOutputFile.isFile()) {
                     outcome.testStatus = ResultStatus.ERROR;
-                    outcome.details = withExitCode(
-                            "Expected output file not found: " + expectedOutputFile.getAbsolutePath(),
-                            processResult.getExitCode()
-                    );
+                    outcome.details = "Expected output file not found: " + expectedOutputFile.getAbsolutePath();
                     return outcome;
                 }
 
                 ComparisonResult comparisonResult;
 
                 try {
-                    comparisonResult = outputComparator.compareWithFile(
-                            processResult.getStdout(),
-                            expectedOutputFile
-                    );
+                    String expectedOutput = Files.readString(expectedOutputFile.toPath(), StandardCharsets.UTF_8);
+                    comparisonResult = outputComparator.compare(processResult.getStdout(), expectedOutput);
+                    outcome.expectedOutput = expectedOutput;
+                    outcome.actualOutput = processResult.getStdout();
                 } catch (IOException e) {
                     outcome.testStatus = ResultStatus.ERROR;
-                    outcome.details = withExitCode(
-                            "Could not read expected output file: " + e.getMessage(),
-                            processResult.getExitCode()
-                    );
+                    outcome.details = "Could not read expected output file: " + e.getMessage();
                     return outcome;
                 }
 
@@ -505,17 +516,14 @@ public class AssignmentRunner {
                         ? ResultStatus.PASS
                         : ResultStatus.FAIL;
 
-                String comparisonDetails = comparisonResult.getDifferences().isEmpty()
-                        ? "Output matches expected output."
-                        : String.join("\n", comparisonResult.getDifferences());
-
-                outcome.details = withExitCode(comparisonDetails, processResult.getExitCode());
+                if (!comparisonResult.isMatch()) {
+                    outcome.details = comparisonResult.getDifferences().isEmpty()
+                            ? "Output differs from expected output."
+                            : String.join("\n", comparisonResult.getDifferences());
+                }
             } else {
                 outcome.testStatus = ResultStatus.SKIPPED;
-                outcome.details = withExitCode(
-                        "Expected output file was not provided.",
-                        processResult.getExitCode()
-                );
+                outcome.details = "Expected output file was not provided.";
             }
         } catch (Exception e) {
             outcome.runStatus = ResultStatus.RUNTIME_ERROR;
@@ -595,7 +603,98 @@ public class AssignmentRunner {
                 result.getCompileOutput(),
                 "Compilation did not complete successfully."
         );
-        result.setTestDetails(detail);
+        result.setTestDetails(appendSection(String.valueOf(result.getCompileStatus()), detail.trim()));
+    }
+
+    private SingleTestOutcome createPreparationErrorOutcome(Exception exception) {
+        SingleTestOutcome outcome = new SingleTestOutcome();
+        outcome.runStatus = ResultStatus.RUNTIME_ERROR;
+        outcome.testStatus = ResultStatus.ERROR;
+        outcome.stderr = safeMessage(exception);
+        outcome.details = "Could not prepare isolated test directory: " + safeMessage(exception);
+        return outcome;
+    }
+
+    private File prepareTestRunsRoot(File studentDir) throws IOException {
+        File parent = studentDir.getParentFile() != null
+                ? studentDir.getParentFile()
+                : studentDir;
+        File testRunsRoot = new File(parent, studentDir.getName() + "-test-runs");
+
+        clearDirectory(testRunsRoot);
+        createDirectory(testRunsRoot);
+        return testRunsRoot;
+    }
+
+    private File prepareTestExecutionDir(File executionDir,
+                                         File testRunsRoot,
+                                         TestCase testCase,
+                                         int index) throws IOException {
+
+        String directoryName = String.format(
+                Locale.ROOT,
+                "%02d-%s",
+                index + 1,
+                safeFileName(displayTestName(testCase))
+        );
+        File testExecutionDir = new File(testRunsRoot, directoryName);
+        copyDirectory(executionDir.toPath(), testExecutionDir.toPath());
+        return testExecutionDir;
+    }
+
+    private void copyDirectory(Path sourceRoot, Path targetRoot) throws IOException {
+        try (Stream<Path> paths = Files.walk(sourceRoot)) {
+            paths.forEach(source -> {
+                Path relative = sourceRoot.relativize(source);
+                Path target = targetRoot.resolve(relative);
+
+                try {
+                    if (Files.isDirectory(source)) {
+                        Files.createDirectories(target);
+                    } else {
+                        Files.createDirectories(target.getParent());
+                        Files.copy(
+                                source,
+                                target,
+                                StandardCopyOption.REPLACE_EXISTING,
+                                StandardCopyOption.COPY_ATTRIBUTES
+                        );
+                    }
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
+        } catch (UncheckedIOException e) {
+            throw e.getCause();
+        }
+    }
+
+    private void clearDirectory(File directory) throws IOException {
+        if (directory == null || !directory.exists()) {
+            return;
+        }
+
+        Path root = directory.toPath();
+
+        try (Stream<Path> paths = Files.walk(root)) {
+            paths
+                    .sorted(Comparator.reverseOrder())
+                    .forEach(path -> {
+                        try {
+                            Files.deleteIfExists(path);
+                        } catch (IOException e) {
+                            throw new UncheckedIOException(e);
+                        }
+                    });
+        } catch (UncheckedIOException e) {
+            throw e.getCause();
+        }
+    }
+
+    private void createDirectory(File directory) throws IOException {
+        if (!directory.exists() && !directory.mkdirs() && !directory.isDirectory()) {
+            throw new IOException("Could not create directory: " + directory.getAbsolutePath());
+        }
     }
 
     private boolean shouldCompile(Configuration config) {
@@ -821,6 +920,215 @@ public class AssignmentRunner {
         return value == null ? "" : value;
     }
 
+    private String displayTestName(TestCase testCase) {
+        if (testCase == null || isBlank(testCase.getName())) {
+            return "Test case";
+        }
+
+        return testCase.getName();
+    }
+
+    private String safeFileName(String value) {
+        String safe = value == null ? "" : value.replaceAll("[^A-Za-z0-9._-]", "_");
+        return safe.isBlank() ? "test" : safe;
+    }
+
+    private String formatAggregatedDetails(List<NamedTestOutcome> outcomes) {
+        String details = formatOutcomeSummary(outcomes);
+        details = appendSection(details, formatFailedComparisons(outcomes));
+        details = appendSection(details, formatRuntimeErrorGroups(outcomes));
+        details = appendSection(details, formatExecutionErrorGroups(outcomes));
+        return details.trim();
+    }
+
+    private String formatOutcomeSummary(List<NamedTestOutcome> outcomes) {
+        List<String> summary = new ArrayList<>();
+
+        for (NamedTestOutcome namedOutcome : outcomes) {
+            summary.add(namedOutcome.testName + ": " + namedOutcome.outcome.testStatus);
+        }
+
+        return String.join("; ", summary);
+    }
+
+    private String formatFailedComparisons(List<NamedTestOutcome> outcomes) {
+        StringBuilder failures = new StringBuilder();
+
+        for (NamedTestOutcome namedOutcome : outcomes) {
+            SingleTestOutcome outcome = namedOutcome.outcome;
+
+            if (outcome.testStatus != ResultStatus.FAIL) {
+                continue;
+            }
+
+            if (failures.length() == 0) {
+                failures.append("Failed comparisons:");
+            }
+
+            failures
+                    .append(System.lineSeparator())
+                    .append("- ")
+                    .append(namedOutcome.testName)
+                    .append(": expected \"")
+                    .append(compactOutput(outcome.expectedOutput))
+                    .append("\", got \"")
+                    .append(compactOutput(outcome.actualOutput))
+                    .append("\"");
+        }
+
+        return failures.toString();
+    }
+
+    private String formatRuntimeErrorGroups(List<NamedTestOutcome> outcomes) {
+        LinkedHashMap<String, DetailGroup> groups = new LinkedHashMap<>();
+
+        for (NamedTestOutcome namedOutcome : outcomes) {
+            SingleTestOutcome outcome = namedOutcome.outcome;
+
+            if (outcome.testStatus != ResultStatus.ERROR
+                    || (outcome.runStatus != ResultStatus.RUNTIME_ERROR
+                    && outcome.runStatus != ResultStatus.TIMEOUT)) {
+                continue;
+            }
+
+            String diagnostic = runtimeDiagnostic(outcome);
+            String key = outcome.runStatus + "|" + outcome.exitCode + "|" + diagnostic;
+            groups
+                    .computeIfAbsent(key, ignored -> new DetailGroup(outcome.runStatus, outcome, diagnostic))
+                    .testNames
+                    .add(namedOutcome.testName);
+        }
+
+        return formatDetailGroups(groups);
+    }
+
+    private String formatExecutionErrorGroups(List<NamedTestOutcome> outcomes) {
+        LinkedHashMap<String, DetailGroup> groups = new LinkedHashMap<>();
+
+        for (NamedTestOutcome namedOutcome : outcomes) {
+            SingleTestOutcome outcome = namedOutcome.outcome;
+
+            if (outcome.testStatus != ResultStatus.ERROR
+                    || outcome.runStatus == ResultStatus.RUNTIME_ERROR
+                    || outcome.runStatus == ResultStatus.TIMEOUT) {
+                continue;
+            }
+
+            String diagnostic = firstNonBlank(outcome.details, outcome.stderr, outcome.stdout, "Execution failed.");
+            String key = "EXECUTION|" + diagnostic;
+            groups
+                    .computeIfAbsent(key, ignored -> new DetailGroup(ResultStatus.ERROR, outcome, diagnostic.trim()))
+                    .testNames
+                    .add(namedOutcome.testName);
+        }
+
+        return formatDetailGroups(groups);
+    }
+
+    private String formatDetailGroups(LinkedHashMap<String, DetailGroup> groups) {
+        StringBuilder formatted = new StringBuilder();
+
+        for (DetailGroup group : groups.values()) {
+            if (formatted.length() > 0) {
+                formatted.append(System.lineSeparator()).append(System.lineSeparator());
+            }
+
+            formatted
+                    .append(groupTitle(group.status))
+                    .append(" in ")
+                    .append(group.testNames.size())
+                    .append(" test(s): ")
+                    .append(String.join(", ", group.testNames));
+
+            if ((group.status == ResultStatus.RUNTIME_ERROR || group.status == ResultStatus.TIMEOUT)
+                    && group.outcome.hasExitCode) {
+                formatted
+                        .append(System.lineSeparator())
+                        .append("Exit code: ")
+                        .append(group.outcome.exitCode);
+            }
+
+            if (!isBlank(group.details)) {
+                formatted
+                        .append(System.lineSeparator())
+                        .append(group.details.trim());
+            }
+        }
+
+        return formatted.toString();
+    }
+
+    private String groupTitle(ResultStatus status) {
+        if (status == ResultStatus.TIMEOUT) {
+            return "Timeout";
+        }
+
+        if (status == ResultStatus.RUNTIME_ERROR) {
+            return "Runtime error";
+        }
+
+        return "Execution error";
+    }
+
+    private String runtimeDiagnostic(SingleTestOutcome outcome) {
+        if (!isBlank(outcome.stderr)) {
+            return outcome.stderr.trim();
+        }
+
+        String detail = stripRuntimeBoilerplate(outcome.details);
+        if (!isBlank(detail)) {
+            return detail.trim();
+        }
+
+        if (!isBlank(outcome.stdout)) {
+            return "stdout: " + compactOutput(outcome.stdout);
+        }
+
+        return "Program did not complete successfully.";
+    }
+
+    private String stripRuntimeBoilerplate(String details) {
+        if (isBlank(details)) {
+            return "";
+        }
+
+        StringBuilder stripped = new StringBuilder();
+        String[] lines = details.replace("\r\n", "\n").replace("\r", "\n").split("\n");
+
+        for (String line : lines) {
+            String trimmed = line.trim();
+
+            if (trimmed.startsWith("Exit code:")
+                    || trimmed.matches("Program exited with code -?\\d+\\.")) {
+                continue;
+            }
+
+            if (stripped.length() > 0) {
+                stripped.append(System.lineSeparator());
+            }
+            stripped.append(line);
+        }
+
+        return stripped.toString();
+    }
+
+    private String compactOutput(String output) {
+        String normalized = valueOrEmpty(output)
+                .replace("\r\n", "\n")
+                .replace("\r", "\n")
+                .trim();
+
+        if (normalized.isEmpty()) {
+            return "<empty>";
+        }
+
+        return normalized
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\t", "\\t")
+                .replace("\n", "\\n");
+    }
+
     private StudentResultService getStudentResultService() throws Exception {
         Field dbManagerField = projectService
                 .getClass()
@@ -882,12 +1190,50 @@ public class AssignmentRunner {
         return current + System.lineSeparator() + line;
     }
 
+    private String appendSection(String current, String section) {
+        if (isBlank(section)) {
+            return current;
+        }
+
+        if (isBlank(current)) {
+            return section;
+        }
+
+        return current + System.lineSeparator() + System.lineSeparator() + section;
+    }
+
     private static class SingleTestOutcome {
         private ResultStatus runStatus = ResultStatus.PENDING;
         private ResultStatus testStatus = ResultStatus.PENDING;
         private int exitCode = 0;
+        private boolean hasExitCode = false;
         private String stdout = "";
         private String stderr = "";
         private String details = "";
+        private String expectedOutput = "";
+        private String actualOutput = "";
+    }
+
+    private static class NamedTestOutcome {
+        private final String testName;
+        private final SingleTestOutcome outcome;
+
+        private NamedTestOutcome(String testName, SingleTestOutcome outcome) {
+            this.testName = testName;
+            this.outcome = outcome;
+        }
+    }
+
+    private static class DetailGroup {
+        private final ResultStatus status;
+        private final SingleTestOutcome outcome;
+        private final String details;
+        private final List<String> testNames = new ArrayList<>();
+
+        private DetailGroup(ResultStatus status, SingleTestOutcome outcome, String details) {
+            this.status = status;
+            this.outcome = outcome;
+            this.details = details;
+        }
     }
 }
